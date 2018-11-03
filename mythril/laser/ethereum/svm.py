@@ -104,12 +104,12 @@ class LaserEVM:
 
     def exec(self, create=False):
         for global_state in self.strategy:
-            if self.execution_timeout and not create:
-                if self.time + timedelta(seconds=self.execution_timeout) <= datetime.now():
-                    return
-            elif self.create_timeout and create:
-                if self.time + timedelta(seconds=self.create_timeout) <= datetime.now():
-                    return
+            #if self.execution_timeout and not create:
+            #    if self.time + timedelta(seconds=self.execution_timeout) <= datetime.now():
+            #        return
+            #elif self.create_timeout and create:
+            #    if self.time + timedelta(seconds=self.create_timeout) <= datetime.now():
+            #        return
 
             try:
                 new_states, op_code = self.execute_state(global_state)
