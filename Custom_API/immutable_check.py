@@ -1,13 +1,18 @@
-from laser.ethereum import svm
-from mythril.ether.soliditycontract import SolidityContract
 from mythril.analysis import solver
 from mythril.exceptions import UnsatError
+from mythril.mythril import Mythril
 from z3 import *
 
 
 class ImmutableFields:
-    def __init__(self):
-        pass
+    def __init__(self, state_variables, contract_name):
+        self.contract_name = contract_name
+
+    def execute(self):
+        self.static_check()
+        self.quick_check()
+        self.symbolic_check()
+
 
     def static_check(self):
         pass
@@ -16,37 +21,18 @@ class ImmutableFields:
         pass
 
     def symbolic_check(self):
+
+        #load Mythril
+        mythril = Mythril()
+        mythril.load_from_solidity(self.contract_name)
+
+        # get statespaces
+        statespaces = mythril.get_raw_statespaces()
+
+
+    '''
+    Return the offset of a state variable given its name
+    '''
+    def _state_variable_mapping(self, variables):
         pass
 
-
-
-
-address = "0x0000000000000000000000000000000000000000"
-contract = SolidityContract("uitwerpselentoken.sol")
-account = svm.Account(address, contract.disassembly)
-accounts = {address: account}
-laser = svm.LaserEVM(accounts)
-laser.sym_exec(address)
-
-for k in laser.nodes:
-    node = laser.nodes[k]
-
-    for state in node.states:
-        if state.get_current_instruction()['opcode'] == 'SSTORE':
-            proposition = node.constraints
-            proposition.append(state.mstate.stack[-1] == 0)
-
-    try:
-        model = solver.get_model(proposition)
-        print("Violation found!")
-
-        for d in model.decls():
-            print("%s = 0x%x\n" % (d.name(), model[d].as_long()))
-
-        codeinfo = contract.get_source_info(state.get_current_instruction()['address'])
-        print("%s\n%s\n" % (codeinfo.lineno, codeinfo.code))
-
-    except UnsatError:
-        pass
-
-print("Analysis completed.")

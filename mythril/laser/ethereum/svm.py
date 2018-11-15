@@ -104,6 +104,7 @@ class LaserEVM:
             # Reset code coverage
             self.coverage = {}
             for i in range(self.max_transaction_count):
+            #for i in range(1):
                 initial_coverage = self._get_covered_instructions()
 
                 self.time = datetime.now()

@@ -33,7 +33,7 @@ from mythril.analysis.security import fire_lasers
 from mythril.analysis.report import Report
 from mythril.ethereum.interface.leveldb.client import EthLevelDB
 
-# logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
 
 class Mythril(object):
@@ -560,6 +560,29 @@ class Mythril(object):
                 "Could not connect to RPC server. Make sure that your node is running and that RPC parameters are set correctly."
             )
         return "\n".join(outtxt)
+
+    def get_raw_statespaces(self,
+        strategy,
+        contract=None,
+        address=None,
+        max_depth=None,
+        execution_timeout=None,
+        create_timeout=None,
+        max_transaction_count=None,):
+
+
+        sym = SymExecWrapper(
+            contract,
+            address,
+            strategy,
+            dynloader=DynLoader(self.eth) if self.dynld else None,
+            max_depth=max_depth,
+            execution_timeout=execution_timeout,
+            create_timeout=create_timeout,
+            max_transaction_count=max_transaction_count,
+        )
+
+        return sym
 
     @staticmethod
     def disassemble(contract):
