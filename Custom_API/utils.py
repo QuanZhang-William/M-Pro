@@ -24,9 +24,9 @@ class Condition:
 
 
 class Action:
-    CHECK_FROM_ORIGINAL_VALUE = "check_from_original_value"
+    CHECK_STATE_VARIABLE_VALUE = "check_state_variable_value"
     CHECK_UNRESTRICTED_CALL = "check_unrestricted_call"
-    CHECK_AGAINST_STATE_VARIABLE = "check_against_state_variable"
+    CHECK_CALLER_AGAINST_STATE_VARIABLE = "check_caller_against_state_variable"
     ALLOWED_STATE_CHANGE_AFTER_EXTERNAL_CALL = "allowed_state_change_after_external_call"
 
 
@@ -51,9 +51,11 @@ class StateVariableParser:
                 if state_variable.type.length is None:
                     sha256_offset = self._calculate_storage_offset(offset)
                     count = 0
-                    for _ in state_variable.expression.expressions:
-                        value.append(sha256_offset + str(count))
-                        count += 1
+
+                    if state_variable.expression is not None:
+                        for _ in state_variable.expression.expressions:
+                            value.append(sha256_offset + str(count))
+                            count += 1
 
                     mapping[state_variable.name] = value
 
@@ -106,3 +108,7 @@ class StateVariableParser:
     # Calculate the keccak256 hash of a 32 bytes array.
     def _keccak256(self, x):
         return sha3.keccak_256(x).hexdigest()
+
+
+sp = StateVariableParser()
+print(sp._bytes32(0x0dbe671f))

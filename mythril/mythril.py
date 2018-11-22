@@ -32,8 +32,7 @@ from mythril.analysis.traceexplore import get_serializable_statespace
 from mythril.analysis.security import fire_lasers
 from mythril.analysis.report import Report
 from mythril.ethereum.interface.leveldb.client import EthLevelDB
-
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 
 
 class Mythril(object):
@@ -468,6 +467,7 @@ class Mythril(object):
             max_depth=max_depth,
             execution_timeout=execution_timeout,
             create_timeout=create_timeout,
+            max_transaction_count=2
         )
         return generate_graph(sym, physics=enable_physics, phrackify=phrackify)
 
@@ -498,7 +498,7 @@ class Mythril(object):
                 max_depth=max_depth,
                 execution_timeout=execution_timeout,
                 create_timeout=create_timeout,
-                max_transaction_count=max_transaction_count,
+                max_transaction_count=3,
             )
 
             issues = fire_lasers(sym, modules)
