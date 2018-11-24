@@ -5,6 +5,12 @@
    http://www.github.com/b-mueller/mythril
 """
 
+import sys
+sys.path.insert(0, '/Users/apple/git/slither/slither')
+sys.path.insert(0, '/Users/apple/git/slither')
+print(sys.path)
+from slither import slither
+
 import logging
 import json
 import os
@@ -470,6 +476,98 @@ class Mythril(object):
             create_timeout=create_timeout,
         )
         return generate_graph(sym, physics=enable_physics, phrackify=phrackify)
+
+    def slither_mythril(self,
+        strategy,
+        contracts=None,
+        address=None,
+        modules=None,
+        verbose_report=False,
+        max_depth=None,
+        execution_timeout=None,
+        create_timeout=None,
+        max_transaction_count=None,):
+
+        RAW, WAR, WAW, RAR = self.parse_slither()
+        #pass the priority to SVM
+        all_issues = []
+        for contract in contracts or self.contracts:
+            sym = SymExecWrapper(
+                contract,
+                address,
+                strategy,
+                dynloader=DynLoader(
+                    self.eth,
+                    storage_loading=self.onchain_storage_access,
+                    contract_loading=self.dynld,
+                ),
+                max_depth=max_depth,
+                execution_timeout=execution_timeout,
+                create_timeout=create_timeout,
+                max_transaction_count=max_transaction_count,
+                priority=[RAW, WAR, WAW, RAR]
+            )
+
+    def parse_slither(self):
+        file_name = 'solidity_examples/calls.sol'
+        contract_name = 'Caller'
+
+        slither1 = slither.Slither(file_name)
+        contract = slither1.get_contract_from_name(contract_name)
+
+        # Get the variable
+        var_a = contract.get_state_variable_from_name('stored_address')
+        # Get the functions writing the variable
+        functions_writing_a = contract.get_functions_writing_to_variable(var_a)
+        functions_reading_a = contract.get_functions_reading_from_variable(var_a)
+
+        writing_list = []
+        reading_list = []
+        writing_obj_list = []
+        reading_obj_list = []
+
+        for write in functions_writing_a:
+            if write.visibility == 'public':
+                writing_list.append(write)
+
+        for read in functions_reading_a:
+            if read.visibility == 'public':
+                reading_list.append(read)
+
+        #TODO: Deal With functions with same name in Slither
+        for contract in self.contracts:
+            if contract.name == contract_name:
+                for obj in contract.disassembly.slither_mappings:
+                    for wt in writing_list:
+                        if str(wt) in obj.function_name:
+                            writing_obj_list.append(obj)
+
+                    for rd in reading_list:
+                        if str(rd) in obj.function_name:
+                            reading_obj_list.append(obj)
+
+        RAW = []
+        WAR = []
+        WAW = []
+        RAR = []
+
+        for write in writing_obj_list:
+            for read in reading_obj_list:
+                RAW.append([write, read])
+
+        for read in reading_obj_list:
+            for write in writing_obj_list:
+                WAR.append([read, write])
+
+        for read1 in reading_obj_list:
+            for read2 in reading_obj_list:
+                RAR.append([read1, read2])
+
+        for write1 in writing_obj_list:
+            for write2 in writing_obj_list:
+                WAW.append([write1, write2])
+
+        return RAW, WAR, WAW, RAR
 
     def fire_lasers(
         self,

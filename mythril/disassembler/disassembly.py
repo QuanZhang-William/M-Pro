@@ -2,6 +2,15 @@ from mythril.ether import util
 from mythril.disassembler import asm
 from mythril.support.signatures import SignatureDb
 import logging
+class MappingObj:
+    function_name = ''
+    function_hash= ''
+    entry_point = ''
+
+    def __init__(self, name, hash, entry):
+        self.function_name = name
+        self.function_hash = hash
+        self.entry_point = entry
 
 
 class Disassembly(object):
@@ -22,6 +31,7 @@ class Disassembly(object):
         self.func_hashes = []
         self.function_name_to_address = {}
         self.address_to_function_name = {}
+        self.slither_mappings = []
 
         signatures = SignatureDb(
             enable_online_lookup=enable_online_lookup
@@ -43,6 +53,8 @@ class Disassembly(object):
                 index, self.instruction_list, signatures
             )
             self.func_hashes.append(function_hash)
+            temp = MappingObj(function_name, jump_target, function_hash)
+            self.slither_mappings.append(temp)
 
             if jump_target is not None and function_name is not None:
                 self.function_name_to_address[function_name] = jump_target

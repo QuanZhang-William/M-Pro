@@ -48,6 +48,14 @@ def main():
         action="store_true",
         help="detect vulnerabilities, use with -c, -a or solidity file(s)",
     )
+
+    commands.add_argument(
+        "-w",
+        "--slither",
+        action="store_true",
+        help="combine slither and mythril",
+    )
+
     commands.add_argument(
         "-t",
         "--truffle",
@@ -242,6 +250,7 @@ def main():
         or args.truffle
         or args.statespace_json
         or args.contract_hash_to_address
+        or args.slither
     ):
         parser.print_help()
         sys.exit()
@@ -372,6 +381,9 @@ def main():
                 0
             ].get_easm()  # or mythril.disassemble(mythril.contracts[0])
             sys.stdout.write(easm_text)
+
+        elif args.slither:
+            mythril.slither_mythril()
 
         elif args.graph or args.fire_lasers:
             if not mythril.contracts:

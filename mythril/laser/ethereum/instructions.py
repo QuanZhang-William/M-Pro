@@ -1025,6 +1025,7 @@ class Instruction:
 
         op0, condition = state.stack.pop(), state.stack.pop()
 
+        test = str(condition)
         try:
             jump_addr = util.get_concrete_int(op0)
         except TypeError:

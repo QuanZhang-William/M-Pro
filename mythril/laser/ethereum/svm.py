@@ -229,6 +229,7 @@ class LaserEVM:
             )
 
             if return_global_state is None:
+                # suicide return data will be None
                 if (
                     not isinstance(transaction, ContractCreationTransaction)
                     or transaction.return_data

@@ -1,14 +1,13 @@
-pragma solidity ^0.4.17;
-
-
 contract Caller {
-	address public stored_address;
+	address stored_address;
 
-	function callstoredaddress() {
-	    stored_address.call();
+	function callstoredaddress(address addr, uint a) public returns(address test){
+	    if(a > 10){
+	        return stored_address;
+	    }
 	}
 
-	function setstoredaddress(address addr) {
+	function setstoredaddress(address addr) public{
 	    stored_address = addr;
 	}
 
