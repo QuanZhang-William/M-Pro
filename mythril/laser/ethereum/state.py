@@ -443,6 +443,7 @@ class GlobalState:
         machine_state=None,
         transaction_stack=None,
         last_return_data=None,
+        last_function_called=None
     ):
         """ Constructor for GlobalState"""
         self.node = node
@@ -452,6 +453,7 @@ class GlobalState:
         self.transaction_stack = transaction_stack if transaction_stack else []
         self.op_code = ""
         self.last_return_data = last_return_data
+        self.last_function_called = last_function_called
 
     def __copy__(self) -> "GlobalState":
         world_state = copy(self.world_state)

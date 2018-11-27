@@ -28,7 +28,7 @@ class SymExecWrapper:
         execution_timeout=None,
         create_timeout=None,
         max_transaction_count=3,
-        priority = None
+        priority=None
     ):
 
         if strategy == "dfs":
@@ -63,7 +63,7 @@ class SymExecWrapper:
 
         if isinstance(contract, SolidityContract):
             self.laser.sym_exec(
-                creation_code=contract.creation_code, contract_name=contract.name
+                creation_code=contract.creation_code, contract_name=contract.name, priority=priority
             )
         elif isinstance(contract, ETHContract) and contract.creation_code:
             self.laser.sym_exec(

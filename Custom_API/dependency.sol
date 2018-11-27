@@ -1,7 +1,7 @@
 contract Caller {
-    uint a = 10;
-    uint b = 0;
-    uint c = 0;
+    uint public a = 10;
+    uint public b = 0;
+    uint public c = 0;
 
     function readA() public returns(uint returnA){
         return a;

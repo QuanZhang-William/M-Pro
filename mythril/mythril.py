@@ -42,6 +42,16 @@ from mythril.ethereum.interface.leveldb.client import EthLevelDB
 # logging.basicConfig(level=logging.DEBUG)
 
 
+
+class MappingObjTuple:
+    first = None
+    second = None
+
+    def __init__(self, first, second):
+        self.first = first
+        self.second = second
+
+
 class Mythril(object):
     """
     Mythril main interface class.
@@ -461,7 +471,9 @@ class Mythril(object):
         phrackify=False,
         execution_timeout=None,
         create_timeout=None,
+        max_transaction_count=2
     ):
+
         sym = SymExecWrapper(
             contract,
             address,
@@ -474,77 +486,87 @@ class Mythril(object):
             max_depth=max_depth,
             execution_timeout=execution_timeout,
             create_timeout=create_timeout,
+            max_transaction_count=max_transaction_count
         )
         return generate_graph(sym, physics=enable_physics, phrackify=phrackify)
 
     def slither_mythril(self,
         strategy,
-        contracts=None,
+        contract,
         address=None,
-        modules=None,
-        verbose_report=False,
         max_depth=None,
+        enable_physics=False,
+        phrackify=False,
         execution_timeout=None,
         create_timeout=None,
-        max_transaction_count=None,):
+        max_transaction_count=None,
+        file=None):
 
-        RAW, WAR, WAW, RAR = self.parse_slither()
-        #pass the priority to SVM
-        all_issues = []
-        for contract in contracts or self.contracts:
-            sym = SymExecWrapper(
-                contract,
-                address,
-                strategy,
-                dynloader=DynLoader(
-                    self.eth,
-                    storage_loading=self.onchain_storage_access,
-                    contract_loading=self.dynld,
-                ),
-                max_depth=max_depth,
-                execution_timeout=execution_timeout,
-                create_timeout=create_timeout,
-                max_transaction_count=max_transaction_count,
-                priority=[RAW, WAR, WAW, RAR]
-            )
+        priority = self.parse_slither(True, contract=contract, file=file[0])
 
-    def parse_slither(self):
-        file_name = 'solidity_examples/calls.sol'
-        contract_name = 'Caller'
+        sym = SymExecWrapper(
+            contract,
+            address,
+            strategy,
+            dynloader=DynLoader(
+                self.eth,
+                storage_loading=self.onchain_storage_access,
+                contract_loading=self.dynld,
+            ),
+            max_depth=max_depth,
+            execution_timeout=execution_timeout,
+            create_timeout=create_timeout,
+            priority=priority,
+            max_transaction_count=max_transaction_count
+        )
+        return generate_graph(sym, physics=enable_physics, phrackify=phrackify)
 
-        slither1 = slither.Slither(file_name)
-        contract = slither1.get_contract_from_name(contract_name)
+    def parse_slither(self, treat_all_variables, contract=None, file=None):
+        if file is None:
+            print('file is not specified for slither')
+            return
+        slither1 = slither.Slither(file)
 
-        # Get the variable
-        var_a = contract.get_state_variable_from_name('stored_address')
-        # Get the functions writing the variable
-        functions_writing_a = contract.get_functions_writing_to_variable(var_a)
-        functions_reading_a = contract.get_functions_reading_from_variable(var_a)
+        if contract.name is None:
+            print('contract cannot be none for slither')
+            return
+        contract = slither1.get_contract_from_name(contract.name)
 
-        writing_list = []
-        reading_list = []
+        functions_writing_a = set()
+        functions_reading_a = set()
+
+        if treat_all_variables:
+            variables = contract.get_all_state_variables()
+            for variable in variables:
+                for func in contract.get_functions_writing_to_variable(variable):
+                    if func not in functions_writing_a:
+                        functions_writing_a.add(func)
+
+                for func in contract.get_functions_reading_from_variable(variable):
+                    if func not in functions_reading_a:
+                        functions_reading_a.add(func)
+        else:
+            # Get the variable
+            var_a = contract.get_state_variable_from_name('balance')
+            # Get the functions writing the variable
+            functions_writing_a = contract.get_functions_writing_to_variable(var_a)
+            functions_reading_a = contract.get_functions_reading_from_variable(var_a)
+
         writing_obj_list = []
         reading_obj_list = []
 
-        for write in functions_writing_a:
-            if write.visibility == 'public':
-                writing_list.append(write)
-
-        for read in functions_reading_a:
-            if read.visibility == 'public':
-                reading_list.append(read)
-
         #TODO: Deal With functions with same name in Slither
-        for contract in self.contracts:
-            if contract.name == contract_name:
-                for obj in contract.disassembly.slither_mappings:
-                    for wt in writing_list:
-                        if str(wt) in obj.function_name:
-                            writing_obj_list.append(obj)
 
-                    for rd in reading_list:
-                        if str(rd) in obj.function_name:
-                            reading_obj_list.append(obj)
+        for obj in contract.disassembly.slither_mappings_list:
+            for wt in functions_writing_a:
+                if str(wt) in obj.function_name:
+                    writing_obj_list.append(obj)
+
+            for rd in functions_writing_a:
+                if str(rd) in obj.function_name:
+                    reading_obj_list.append(obj)
+
+        priority = {}
 
         RAW = []
         WAR = []
@@ -553,21 +575,25 @@ class Mythril(object):
 
         for write in writing_obj_list:
             for read in reading_obj_list:
-                RAW.append([write, read])
+                RAW.append(MappingObjTuple(write, read))
+        priority['RAW'] = RAW
 
         for read in reading_obj_list:
             for write in writing_obj_list:
-                WAR.append([read, write])
+                WAR.append(MappingObjTuple(read, write))
+        priority['WAR'] = WAR
 
         for read1 in reading_obj_list:
             for read2 in reading_obj_list:
-                RAR.append([read1, read2])
+                RAR.append(MappingObjTuple(read1, read2))
+        priority['RAR'] = RAR
 
         for write1 in writing_obj_list:
             for write2 in writing_obj_list:
-                WAW.append([write1, write2])
+                WAW.append(MappingObjTuple(write1, write2))
+        priority['WAW'] = WAW
 
-        return RAW, WAR, WAW, RAR
+        return priority
 
     def fire_lasers(
         self,

@@ -11,6 +11,8 @@ import os
 import sys
 import argparse
 
+import datetime
+
 # logging.basicConfig(level=logging.DEBUG)
 
 from mythril.exceptions import CriticalError, AddressNotFoundError
@@ -383,7 +385,15 @@ def main():
             sys.stdout.write(easm_text)
 
         elif args.slither:
-            mythril.slither_mythril()
+            mythril.slither_mythril(
+                    strategy=args.strategy,
+                    contract=mythril.contracts[0],
+                    address=address,
+                    max_depth=args.max_depth,
+                    execution_timeout=args.execution_timeout,
+                    create_timeout=args.create_timeout,
+                    max_transaction_count=args.max_transaction_count,
+                    file=args.solidity_file)
 
         elif args.graph or args.fire_lasers:
             if not mythril.contracts:
@@ -392,6 +402,7 @@ def main():
                 )
 
             if args.graph:
+                start = datetime.datetime.now()
                 html = mythril.graph_html(
                     strategy=args.strategy,
                     contract=mythril.contracts[0],
@@ -401,11 +412,15 @@ def main():
                     max_depth=args.max_depth,
                     execution_timeout=args.execution_timeout,
                     create_timeout=args.create_timeout,
+                    max_transaction_count=2
                 )
 
                 try:
                     with open(args.graph, "w") as f:
                         f.write(html)
+
+                    end = datetime.datetime.now()
+                    print (end-start)
                 except Exception as e:
                     exit_with_error(args.outform, "Error saving graph: " + str(e))
 

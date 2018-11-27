@@ -17,6 +17,7 @@ from copy import copy
 from mythril.laser.ethereum.transaction import (
     execute_contract_creation,
     execute_message_call,
+    heuristic_message_call
 )
 from functools import reduce
 from mythril.laser.ethereum.evm_exceptions import VmException
@@ -52,6 +53,8 @@ class LaserEVM:
         self.world_state = world_state
         self.open_states = [world_state]
 
+        self.heuristic_branching = False
+
         self.nodes = {}
         self.edges = []
         self.coverage = {}
@@ -72,6 +75,19 @@ class LaserEVM:
         self.pre_hooks = {}
         self.post_hooks = {}
 
+        self.first_order_work_list = ['RAW']
+        self.second_order_work_list = ['WAR']
+        self.third_order_work_list = ['WAW']
+        self.forth_order_work_list = ['RAR']
+        self.ranking = []
+
+        self.bad_bit = False
+
+        self.first_work_list = []
+        self.second_work_list = []
+        self.third_work_list = []
+        self.forth_work_list = []
+
         logging.info(
             "LASER EVM initialized with dynamic loader: " + str(dynamic_loader)
         )
@@ -86,6 +102,7 @@ class LaserEVM:
         creation_code=None,
         contract_name=None,
         max_transactions=3,
+        priority=None
     ) -> None:
         logging.debug("Starting LASER execution")
         self.time = datetime.now()
@@ -110,7 +127,7 @@ class LaserEVM:
                     "Increase the resources for creation execution (--max-depth or --create-timeout)"
                 )
 
-            self._execute_transactions(created_account.address)
+            self._execute_transactions(created_account.address, priority)
 
         logging.info("Finished symbolic execution")
         logging.info(
@@ -127,7 +144,7 @@ class LaserEVM:
             )
             logging.info("Achieved {:.2f}% coverage for code: {}".format(cov, code))
 
-    def _execute_transactions(self, address):
+    def _execute_transactions(self, address, priority=None):
         """
         This function executes multiple transactions on the address based on the coverage
         :param address: Address of the contract
@@ -139,7 +156,8 @@ class LaserEVM:
 
             self.time = datetime.now()
             logging.info("Starting message call transaction, iteration: {}".format(i))
-            execute_message_call(self, address)
+            execute_message_call(self, address, priority)
+            #heuristic_message_call(self, address, priority)
 
             end_coverage = self._get_covered_instructions()
             if end_coverage == initial_coverage:
@@ -154,7 +172,7 @@ class LaserEVM:
             )
         return total_covered_instructions
 
-    def exec(self, create=False) -> None:
+    def exec(self, create=False, priority=None, title=None, laser_obj=None) -> None:
         for global_state in self.strategy:
             #if self.execution_timeout and not create:
             #    if self.time + timedelta(seconds=self.execution_timeout) <= datetime.now():
@@ -164,17 +182,21 @@ class LaserEVM:
             #        return
 
             try:
-                new_states, op_code = self.execute_state(global_state)
+                new_states, op_code = self.execute_state(global_state, priority, title, laser_obj=laser_obj)
             except NotImplementedError:
                 logging.debug("Encountered unimplemented instruction")
                 continue
             self.manage_cfg(op_code, new_states)
 
+            # when end of transac is raised, new states are added to self.open_states, but not in the work_list
+            if self.bad_bit:
+                new_states.pop()
+                self.bad_bit = False
             self.work_list += new_states
             self.total_states += len(new_states)
 
     def execute_state(
-        self, global_state: GlobalState
+        self, global_state: GlobalState, priority=None, title=None, laser_obj=None
     ) -> Tuple[List[GlobalState], Union[str, None]]:
         instructions = global_state.environment.code.instruction_list
         try:
@@ -186,7 +208,7 @@ class LaserEVM:
         self._execute_pre_hook(op_code, global_state)
         try:
             self._measure_coverage(global_state)
-            new_global_states = Instruction(op_code, self.dynamic_loader).evaluate(
+            new_global_states = Instruction(op_code, self.dynamic_loader, priority, title, laser_obj).evaluate(
                 global_state
             )
 

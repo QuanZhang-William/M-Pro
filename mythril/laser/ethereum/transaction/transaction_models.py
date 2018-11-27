@@ -87,7 +87,7 @@ class MessageCallTransaction:
         self.code = code
         self.return_data = None
 
-    def initial_global_state(self) -> GlobalState:
+    def initial_global_state(self, last_func_called=None) -> GlobalState:
         """Initialize the execution environment"""
         environment = Environment(
             self.callee_account,
@@ -100,7 +100,7 @@ class MessageCallTransaction:
             calldata_type=self.call_data_type,
         )
 
-        global_state = GlobalState(self.world_state, environment, None)
+        global_state = GlobalState(self.world_state, environment, None, last_function_called=last_func_called)
         global_state.environment.active_function_name = "fallback"
 
         return global_state
@@ -166,7 +166,7 @@ class ContractCreationTransaction:
         self.code = code
         self.return_data = None
 
-    def initial_global_state(self) -> GlobalState:
+    def initial_global_state(self, last_func_called=None) -> GlobalState:
         """Initialize the execution environment"""
         environment = Environment(
             self.callee_account,

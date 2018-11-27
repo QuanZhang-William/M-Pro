@@ -30,18 +30,11 @@ def search_children(
         if n_states > start_index:
 
             for j in range(start_index, n_states):
-<<<<<<< HEAD
-
-                if node.states[j].get_current_instruction()['opcode'] == 'SSTORE':
-                    results.append(node.states[j].get_current_instruction()['address'])
-
-=======
                 if (
                     node.states[j].get_current_instruction()["opcode"] == "SSTORE"
                     and node.states[j].current_transaction.id == transaction_id
                 ):
                     results.append(node.states[j].get_current_instruction()["address"])
->>>>>>> d75bed3a22a412579b411aded48b25e0d9a4598c
         children = []
 
         for edge in statespace.edges:
