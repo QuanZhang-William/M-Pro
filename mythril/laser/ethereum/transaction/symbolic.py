@@ -19,44 +19,55 @@ def heuristic_message_call(laser_evm, callee_address: str, priority=None):
 
 
 def heuristic_message_call_helper(laser_evm, callee_address: str, priority=None):
-    open_states = laser_evm.open_states[:]
-
-    ranking = []
-    first_order_work_list = ['RAW']
-    second_order_work_list = ['WAR']
-    third_order_work_list = ['WAW']
-    forth_order_work_list = ['RAR']
-
+    jump = False
     for open_state in laser_evm.open_states:
+        name = open_state.node.function_name
         for list in priority['RAW']:
-            if open_state.node.function_name == list.first.function_name:
+            if name == list.first.function_name:
                 laser_evm.first_order_work_list.append(open_state)
                 laser_evm.open_states.remove(open_state)
+                jump = True
                 break
-    laser_evm.ranking.append(laser_evm.first_order_work_list)
 
-    for open_state in laser_evm.open_states:
+        if jump:
+            jump = False
+            continue
+
         for list in priority['WAR']:
-            if open_state.node.function_name == list.first.function_name:
+            if name == list.first.function_name:
                 laser_evm.second_order_work_list.append(open_state)
                 laser_evm.open_states.remove(open_state)
+                jump = True
                 break
-    laser_evm.ranking.append(laser_evm.second_order_work_list)
 
-    for open_state in laser_evm.open_states:
+        if jump:
+            jump = False
+            continue
+
         for list in priority['WAW']:
-            if open_state.node.function_name == list.first.function_name:
+            if name == list.first.function_name:
                 laser_evm.third_order_work_list.append(open_state)
                 laser_evm.open_states.remove(open_state)
+                jump = True
                 break
-    laser_evm.ranking.append(laser_evm.third_order_work_list)
 
-    for open_state in laser_evm.open_states:
+        if jump:
+            jump = False
+            continue
+
         for list in priority['RAR']:
-            if open_state.node.function_name == list.first.function_name:
+            if name == list.first.function_name:
                 laser_evm.forth_order_work_list.append(open_state)
                 laser_evm.open_states.remove(open_state)
+                jump = True
                 break
+        if jump:
+            jump = False
+            continue
+
+    laser_evm.ranking.append(laser_evm.first_order_work_list)
+    laser_evm.ranking.append(laser_evm.second_order_work_list)
+    laser_evm.ranking.append(laser_evm.third_order_work_list)
     laser_evm.ranking.append(laser_evm.forth_order_work_list)
 
     del laser_evm.open_states[:]

@@ -471,9 +471,10 @@ class Mythril(object):
         phrackify=False,
         execution_timeout=None,
         create_timeout=None,
-        max_transaction_count=2
+        max_transaction_count=2,
+        file=None
     ):
-
+        priority = self.parse_slither(True, contract=contract, file=file[0])
         sym = SymExecWrapper(
             contract,
             address,
@@ -486,6 +487,7 @@ class Mythril(object):
             max_depth=max_depth,
             execution_timeout=execution_timeout,
             create_timeout=create_timeout,
+            priority=priority,
             max_transaction_count=max_transaction_count
         )
         return generate_graph(sym, physics=enable_physics, phrackify=phrackify)
@@ -530,41 +532,53 @@ class Mythril(object):
         if contract.name is None:
             print('contract cannot be none for slither')
             return
-        contract = slither1.get_contract_from_name(contract.name)
+        slither_contract = slither1.get_contract_from_name(contract.name)
 
-        functions_writing_a = set()
-        functions_reading_a = set()
+        #functions_writing_a = set()
+        #functions_reading_a = set()
+
+        functions_writing_a = {}
+        functions_reading_a = {}
 
         if treat_all_variables:
-            variables = contract.get_all_state_variables()
+            variables = slither_contract.get_all_state_variables()
             for variable in variables:
-                for func in contract.get_functions_writing_to_variable(variable):
-                    if func not in functions_writing_a:
-                        functions_writing_a.add(func)
+                if variable not in functions_writing_a:
+                    functions_writing_a[variable] = set()
+                for func in slither_contract.get_functions_writing_to_variable(variable):
+                    if func not in functions_writing_a[variable]:
+                        functions_writing_a[variable].add(func)
 
-                for func in contract.get_functions_reading_from_variable(variable):
-                    if func not in functions_reading_a:
-                        functions_reading_a.add(func)
+                if variable not in functions_reading_a:
+                    functions_reading_a[variable] = set()
+                for func in slither_contract.get_functions_reading_from_variable(variable):
+                    if func not in functions_reading_a[variable]:
+                        functions_reading_a[variable].add(func)
         else:
             # Get the variable
-            var_a = contract.get_state_variable_from_name('balance')
+            var_a = slither_contract.get_state_variable_from_name('collectedFees')
             # Get the functions writing the variable
-            functions_writing_a = contract.get_functions_writing_to_variable(var_a)
-            functions_reading_a = contract.get_functions_reading_from_variable(var_a)
+            functions_writing_a = slither_contract.get_functions_writing_to_variable(var_a)
+            functions_reading_a = slither_contract.get_functions_reading_from_variable(var_a)
 
-        writing_obj_list = []
-        reading_obj_list = []
+        writing_obj_list = {}
+        reading_obj_list = {}
 
         #TODO: Deal With functions with same name in Slither
 
-        for obj in contract.disassembly.slither_mappings_list:
-            for wt in functions_writing_a:
-                if str(wt) in obj.function_name:
-                    writing_obj_list.append(obj)
+        for wt_key, wt_value in functions_writing_a.items():
+            if wt_key not in writing_obj_list:
+                writing_obj_list[wt_key] = set()
+            for item in wt_value:
+                if item.full_name in contract.disassembly.slither_mappings_dict:
+                    writing_obj_list[wt_key].add(contract.disassembly.slither_mappings_dict[item.full_name])
 
-            for rd in functions_writing_a:
-                if str(rd) in obj.function_name:
-                    reading_obj_list.append(obj)
+        for rd_key, rd_value in functions_reading_a.items():
+            if rd_key not in reading_obj_list:
+                reading_obj_list[rd_key] = set()
+            for item in rd_value:
+                if item.full_name in contract.disassembly.slither_mappings_dict:
+                    reading_obj_list[rd_key].add(contract.disassembly.slither_mappings_dict[item.full_name])
 
         priority = {}
 
@@ -573,24 +587,39 @@ class Mythril(object):
         WAW = []
         RAR = []
 
+        '''
         for write in writing_obj_list:
             for read in reading_obj_list:
                 RAW.append(MappingObjTuple(write, read))
         priority['RAW'] = RAW
+        '''
 
-        for read in reading_obj_list:
-            for write in writing_obj_list:
-                WAR.append(MappingObjTuple(read, write))
+        for wt_key, wt_value in writing_obj_list.items():
+            if wt_key in reading_obj_list:
+                for temp in writing_obj_list[wt_key]:
+                    for rd_value in reading_obj_list[wt_key]:
+                        RAW.append(MappingObjTuple(temp, rd_value))
+        priority['RAW'] = RAW
+
+        for rd_key, rd_value in reading_obj_list.items():
+            if rd_key in writing_obj_list:
+                for rd_value in reading_obj_list[rd_key]:
+                    for temp in writing_obj_list[rd_key]:
+                        WAR.append(MappingObjTuple(rd_value, temp))
         priority['WAR'] = WAR
 
-        for read1 in reading_obj_list:
-            for read2 in reading_obj_list:
-                RAR.append(MappingObjTuple(read1, read2))
+        for rd_key, rd_value in reading_obj_list.items():
+            for read1 in reading_obj_list[rd_key]:
+                for read2 in reading_obj_list[rd_key]:
+                    if read1 != read2:
+                        RAR.append(MappingObjTuple(read1, read2))
         priority['RAR'] = RAR
 
-        for write1 in writing_obj_list:
-            for write2 in writing_obj_list:
-                WAW.append(MappingObjTuple(write1, write2))
+        for wt_key, wt_value in writing_obj_list.items():
+            for write1 in writing_obj_list[wt_key]:
+                for write2 in writing_obj_list[wt_key]:
+                    if write1 != write2:
+                        WAW.append(MappingObjTuple(write1, write2))
         priority['WAW'] = WAW
 
         return priority

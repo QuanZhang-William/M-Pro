@@ -1037,11 +1037,14 @@ class Instruction:
 
         return [new_state]
 
-    def get_next_priority(self, priority, title=None):
-        if title is None:
-            return
+        '''
+            def get_next_priority(self, priority, title=None):
+            if title is None:
+                return
 
-        return priority[title]
+            return priority[title]
+        '''
+
         '''
         first = priority['RAW']
         second = priority['WAR']
@@ -1121,9 +1124,10 @@ class Instruction:
         # if it is the second msg call transcation,
         # heuristic branching enabled by push4,
         # and ranking is not done
-        if self.priority is not None and len(global_state.world_state.transaction_sequence) > 2 and heuristic_branching and\
+        if self.priority is not None and len(
+            global_state.world_state.transaction_sequence) > 2 and heuristic_branching and \
                 self.title is not None:
-            next_explores = self.get_next_priority(self.priority, self.title)
+            next_explores = self.priority[self.title]
 
             #TODO: Some testing required
             if next_explores is None:
@@ -1131,7 +1135,8 @@ class Instruction:
 
             for obj in next_explores:
                 hash = int(obj.second.function_hash,16)
-                if str(hash) in str(condition):
+                func = obj.first.function_name
+                if func == global_state.last_function_called and str(hash) in str(condition):
                     true_state = self._true_branch(condition, global_state, jump_addr, disassembly)
                     false_state = self._false_branch(condition, global_state)
                     states.append(false_state)
@@ -1145,11 +1150,12 @@ class Instruction:
 
             false_state = self._false_branch(condition, global_state)
             # check following priority, and append them to lower order work list accordingly
-            if global_state.last_function_called is not None:
+            glb_func_called = global_state.last_function_called
+            if glb_func_called is not None:
                 for key, value in self.priority.items():
                     for obj1 in value:
                         second_func_hash = int(obj1.second.function_hash, 16)
-                        if global_state.last_function_called == obj1.first.function_name and str(second_func_hash) in str(condition):
+                        if glb_func_called == obj1.first.function_name and str(second_func_hash) in str(condition):
                             true_state1 = self._true_branch(condition, global_state, jump_addr, disassembly)
                             if key == 'RAW':
                                 self.laser_obj.first_work_list.append(true_state1)

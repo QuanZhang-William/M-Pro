@@ -58,7 +58,7 @@ class Disassembly(object):
             self.func_hashes.append(function_hash)
             temp = MappingObj(function_name, function_hash, jump_target)
             self.slither_mappings_list.append(temp)
-            self.slither_mappings_dict[function_name] = function_hash
+            self.slither_mappings_dict[function_name] = temp
 
             if jump_target is not None and function_name is not None:
                 self.function_name_to_address[function_name] = jump_target

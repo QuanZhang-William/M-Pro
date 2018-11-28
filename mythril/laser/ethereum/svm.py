@@ -156,8 +156,8 @@ class LaserEVM:
 
             self.time = datetime.now()
             logging.info("Starting message call transaction, iteration: {}".format(i))
-            execute_message_call(self, address, priority)
-            #heuristic_message_call(self, address, priority)
+            #execute_message_call(self, address, priority)
+            heuristic_message_call(self, address, priority)
 
             end_coverage = self._get_covered_instructions()
             if end_coverage == initial_coverage:
