@@ -26,7 +26,7 @@ class CustomCheck:
     offset_mapping = {}
     issues = []
 
-    def __init__(self, file_name, contract, call_depth, conditions=None, actions=None, offset_mapping={}):
+    def __init__(self, file_name, contract, call_depth, conditions=None, actions=None):
         if conditions is not None:
             for condition in conditions:
                 self.conditions.append(condition)
@@ -52,7 +52,7 @@ class CustomCheck:
 
         self.contract = mythril.contracts[0]
 
-        #TODO: Deal with multiple contracts, it is default to first contract
+        # TODO: Deal with multiple contracts, it is default to first contract
         sym = symbolic.SymExecWrapper(
             mythril.contracts[0],
             address,
@@ -96,7 +96,7 @@ class CustomCheck:
         for account in self.state_spaces.sstors.values():
             for index in account.values():
                 for sstore in index:
-                    #skip the constructor
+                    # skip the constructor
                     if isinstance(sstore.state.current_transaction, ContractCreationTransaction):
                         continue
 
@@ -112,14 +112,12 @@ class CustomCheck:
 
         # analyze
         for account in self.state_spaces.sstors.values():
-            for group in account.values():
-                for state in group:
+            for temp_group in account.values():
+                for state in temp_group:
 
                     # if the write is in constructor, it is not a violation
                     # TODO: there should be some testing here regarding the first write
 
-                    offset = None
-                    name = ''
                     if target_state_variable in self.offset_mapping:
                         offset = self.offset_mapping[target_state_variable]
                         name = target_state_variable
@@ -133,7 +131,7 @@ class CustomCheck:
                     proposition.append(writing_to == offset)
 
                     try:
-                        model = solver.get_model(proposition)
+                        # model = solver.get_model(proposition)
 
                         # if it is first time modify the value
                         if constructor_flag[name]:
@@ -161,7 +159,6 @@ class CustomCheck:
 
                     except UnsatError:
                         print('writting to offeset is unsat, skipping \n')
-
 
         print('immutable check complete\n')
 
@@ -253,8 +250,6 @@ class CustomCheck:
 
     @staticmethod
     def _check_unrestricted_condition(self, state, custom_target):
-        offset = None
-        name = ''
         if custom_target in self.offset_mapping:
             offset = self.offset_mapping[custom_target]
             name = custom_target
@@ -331,7 +326,6 @@ class CustomCheck:
             return offset, name
         else:
             raise Exception("State Variable Offset Mapping not found")
-
 
     '''
     Custom Checks
