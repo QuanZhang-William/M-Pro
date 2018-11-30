@@ -10,7 +10,8 @@ contract Suicide {
         owner = msg.sender;
     }
 
-    function kill(address addr) onlyOwner public{
+    function kill(address addr){
+        if(msg.sender != owner) revert();
         selfdestruct(msg.sender);
     }
 }

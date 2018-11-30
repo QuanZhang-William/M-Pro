@@ -502,6 +502,8 @@ class Mythril(object):
         execution_timeout=None,
         create_timeout=None,
         max_transaction_count=None,
+        modules=None,
+        verbose_report=False,
         file=None):
 
         priority = self.parse_slither(True, contract=contract, file=file[0])
@@ -521,7 +523,24 @@ class Mythril(object):
             priority=priority,
             max_transaction_count=max_transaction_count
         )
-        return generate_graph(sym, physics=enable_physics, phrackify=phrackify)
+
+        issues = fire_lasers(sym, modules)
+
+        if type(contract) == SolidityContract:
+            for issue in issues:
+                issue.add_code_info(contract)
+
+        all_issues = []
+        all_issues += issues
+        #return generate_graph(sym, physics=enable_physics, phrackify=phrackify)
+
+        # Finally, output the results
+        report = Report(verbose_report)
+        for issue in all_issues:
+            report.append_issue(issue)
+
+        return report
+
 
     def parse_slither(self, treat_all_variables, contract=None, file=None):
         if file is None:

@@ -156,8 +156,10 @@ class LaserEVM:
 
             self.time = datetime.now()
             logging.info("Starting message call transaction, iteration: {}".format(i))
-            #execute_message_call(self, address, priority)
-            heuristic_message_call(self, address, priority)
+            if priority is None:
+                execute_message_call(self, address, priority)
+            else:
+                heuristic_message_call(self, address, priority)
 
             end_coverage = self._get_covered_instructions()
             if end_coverage == initial_coverage:
@@ -174,12 +176,12 @@ class LaserEVM:
 
     def exec(self, create=False, priority=None, title=None, laser_obj=None) -> None:
         for global_state in self.strategy:
-            #if self.execution_timeout and not create:
-            #    if self.time + timedelta(seconds=self.execution_timeout) <= datetime.now():
-            #        return
-            #elif self.create_timeout and create:
-            #    if self.time + timedelta(seconds=self.create_timeout) <= datetime.now():
-            #        return
+            if self.execution_timeout and not create:
+                if self.time + timedelta(seconds=self.execution_timeout) <= datetime.now():
+                    return
+            elif self.create_timeout and create:
+                if self.time + timedelta(seconds=self.create_timeout) <= datetime.now():
+                    return
 
             try:
                 new_states, op_code = self.execute_state(global_state, priority, title, laser_obj=laser_obj)

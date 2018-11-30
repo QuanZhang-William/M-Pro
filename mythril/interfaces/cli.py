@@ -386,17 +386,22 @@ def main():
 
         elif args.slither:
             start = datetime.datetime.now()
-            graph = mythril.slither_mythril(
+            report = mythril.slither_mythril(
                     strategy=args.strategy,
                     contract=mythril.contracts[0],
                     address=address,
+                    modules=[m.strip() for m in args.modules.strip().split(",")]
+                    if args.modules
+                    else [],
+                    verbose_report=args.verbose_report,
                     max_depth=args.max_depth,
                     execution_timeout=args.execution_timeout,
                     create_timeout=args.create_timeout,
                     max_transaction_count=args.max_transaction_count,
                     file=args.solidity_file)
 
-            try:
+            '''
+                        try:
                 with open(args.graph, "w") as f:
                     f.write(graph)
 
@@ -404,6 +409,14 @@ def main():
                 print(end - start)
             except Exception as e:
                 exit_with_error(args.outform, "Error saving graph: " + str(e))
+            '''
+
+            outputs = {
+                "json": report.as_json(),
+                "text": report.as_text(),
+                "markdown": report.as_markdown(),
+            }
+            print(outputs[args.outform])
 
             end = datetime.datetime.now()
             print(end - start)
@@ -439,6 +452,7 @@ def main():
                     exit_with_error(args.outform, "Error saving graph: " + str(e))
 
             else:
+                start = datetime.datetime.now()
                 report = mythril.fire_lasers(
                     strategy=args.strategy,
                     address=address,
@@ -457,6 +471,8 @@ def main():
                     "markdown": report.as_markdown(),
                 }
                 print(outputs[args.outform])
+                end = datetime.datetime.now()
+                print(end - start)
 
         elif args.statespace_json:
 

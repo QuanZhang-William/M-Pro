@@ -1,4 +1,4 @@
-contract Exceptions {
+ contract Exceptions {
 
     uint256[8] myarray;
 
