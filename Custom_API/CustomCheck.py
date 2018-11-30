@@ -7,10 +7,15 @@ from mythril.analysis.report import Report
 from mythril.laser.ethereum.transaction.transaction_models import ContractCreationTransaction
 from Custom_API.utils import Condition
 from Custom_API.utils import Action
+from Custom_API.utils import StateVariableParser
+
+from slither import slither
+from mythril.mythril import Mythril
+from mythril.analysis import symbolic
+from Custom_API.values import *
 
 import re
 from z3 import *
-import logging
 
 
 class CustomCheck:
@@ -21,10 +26,7 @@ class CustomCheck:
     offset_mapping = {}
     issues = []
 
-    def __init__(self, contract, state_spaces, conditions = None, actions = None, offset_mapping={}):
-        self.state_spaces = state_spaces
-        self.contract = contract
-
+    def __init__(self, file_name, contract, call_depth, conditions=None, actions=None, offset_mapping={}):
         if conditions is not None:
             for condition in conditions:
                 self.conditions.append(condition)
@@ -33,7 +35,36 @@ class CustomCheck:
             for action in actions:
                 self.actions.append(action)
 
-        self.offset_mapping = offset_mapping
+        self.initialization(file_name, contract, call_depth)
+
+    def initialization(self, file_name, contract, call_depth=2):
+        slither1 = slither.Slither(file_name)
+        contract = slither1.get_contract_from_name(contract)
+        var_a = contract.get_all_state_variables()
+
+        sp = StateVariableParser(var_a)
+        mapping = sp.parse()
+
+        # load Mythril
+        contract_name = [file_name]
+        mythril = Mythril()
+        mythril.load_from_solidity(contract_name)
+
+        self.contract = mythril.contracts[0]
+
+        #TODO: Deal with multiple contracts, it is default to first contract
+        sym = symbolic.SymExecWrapper(
+            mythril.contracts[0],
+            address,
+            strategy,
+            dynloader=None,
+            max_depth=max_depth,
+            execution_timeout=execution_timeout,
+            create_timeout=create_timeout,
+            max_transaction_count=call_depth,
+        )
+        self.state_spaces = sym
+        self.offset_mapping = mapping
 
     '''
     Invoke original Mythril analysis module of:
@@ -65,14 +96,13 @@ class CustomCheck:
         for account in self.state_spaces.sstors.values():
             for index in account.values():
                 for sstore in index:
-
                     #skip the constructor
                     if isinstance(sstore.state.current_transaction, ContractCreationTransaction):
                         continue
 
                     if sstore.state.mstate.stack[-1] == offset:
                         issue = self._check_unrestricted_write_helper(sstore)
-                        if len(issue) > 0:
+                        if issue is not None:
                             self.issues.append(issue)
 
     def immutable_check(self, target_state_variable):
@@ -186,7 +216,6 @@ class CustomCheck:
             print("unrestricted call found")
             return issue
 
-
     def _check_state_variable_value(self):
         pass
 
@@ -251,11 +280,10 @@ class CustomCheck:
     def _check_unrestricted_write_helper(state):
 
         proposition = state.state.mstate.constraints
-        issue = []
         try:
             model = solver.get_model(proposition)
             # if the write is unrestricted by the caller, it is a violation
-            if re.search(r"caller", str(proposition)):# and re.search(r"[0-9]{20}", str(proposition)):
+            if 'caller' in str(proposition):
                 print("the caller is constrained to the write")
             else:
                 debug = solver.get_transaction_sequence(state.state, proposition)
@@ -276,6 +304,7 @@ class CustomCheck:
 
         except:
             print('unsat condition, skipping')
+            return
 
     def generate_report(self):
         report = Report(True)
@@ -302,6 +331,7 @@ class CustomCheck:
             return offset, name
         else:
             raise Exception("State Variable Offset Mapping not found")
+
 
     '''
     Custom Checks

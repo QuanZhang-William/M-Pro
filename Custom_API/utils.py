@@ -1,8 +1,3 @@
-from mythril.analysis import solver
-from mythril.exceptions import UnsatError
-from mythril.mythril import Mythril
-from z3 import *
-from abc import ABCMeta, abstractmethod
 import sys
 sys.path.insert(0, '/Users/apple/git/slither/slither')
 sys.path.insert(0, '/Users/apple/git/slither')
@@ -12,7 +7,7 @@ from slither.core.solidity_types import UserDefinedType
 from slither.core.solidity_types import MappingType
 from slither.solc_parsing.declarations.structure import StructureSolc
 from slither.core.declarations.enum import Enum
-from slither.core.expressions import  *
+
 
 import binascii
 import sha3
@@ -110,5 +105,5 @@ class StateVariableParser:
         return sha3.keccak_256(x).hexdigest()
 
 
-sp = StateVariableParser()
-print(sp._bytes32(0x0dbe671f))
+#sp = StateVariableParser()
+#print(sp._bytes32(0x0dbe671f))
