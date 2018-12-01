@@ -12,7 +12,7 @@ contract UnristrictedWrite {
         _;
     }
 
-    function updateManager() public {
+    function updateManager() public only_owner{
         manager = 10;
     }
 

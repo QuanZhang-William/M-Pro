@@ -21,20 +21,10 @@ from z3 import *
 class CustomCheck:
     contract = None
     state_spaces = None
-    conditions = []
-    actions = []
     offset_mapping = {}
     issues = []
 
     def __init__(self, file_name, contract, call_depth, conditions=None, actions=None):
-        if conditions is not None:
-            for condition in conditions:
-                self.conditions.append(condition)
-
-        if actions is not None:
-            for action in actions:
-                self.actions.append(action)
-
         self.initialization(file_name, contract, call_depth)
 
     def initialization(self, file_name, contract, call_depth=2):
@@ -131,7 +121,7 @@ class CustomCheck:
                     proposition.append(writing_to == offset)
 
                     try:
-                        # model = solver.get_model(proposition)
+                        model = solver.get_model(proposition)
 
                         # if it is first time modify the value
                         if constructor_flag[name]:
@@ -213,37 +203,65 @@ class CustomCheck:
             print("unrestricted call found")
             return issue
 
-    def _check_state_variable_value(self):
-        pass
+    def _check_unrestricted_caller(self, call, node=None, suicide=False, target_variable=None):
 
-    def _check_unrestricted_caller(self, call, offset=None):
-        proposition = call.state.mstate.constraints
-        issue = []
-        try:
-            model = solver.get_model(proposition)
-            # if the CALL is unrestricted by the caller, it is a violation
-            if not re.search(r"caller", str(proposition)) and re.search(r"caller", str(call.to)):
-                print("the caller is constrained to the write")
+        if suicide:
+            instruction = call.get_current_instruction()
+            if instruction["opcode"] != "SUICIDE":
+                return
 
-            else:
-                debug = solver.get_transaction_sequence(call.state, proposition)
+            proposition = node.constraints
+            try:
+                model = solver.get_model(proposition)
+                # if the CALL is unrestricted by the caller, it is a violation
+                if re.search(r"caller", str(proposition)):
+                    print("the caller is constrained to the write")
 
-                issue = Issue(
-                    contract=call.state.node.contract_name,
-                    function_name=call.state.node.function_name,
-                    address=call.state.instruction["address"],
-                    swc_id="Unrestricted call to State Variable",
-                    bytecode=call.state.environment.code.bytecode,
-                    title="Unrestricted call to State Variable",
-                    _type="Warning",
-                    # description=description,
-                    debug=debug)
+                else:
 
-                print("unrestricted call found")
-            return issue
+                    issue = Issue(
+                        contract=node.contract_name,
+                        function_name=node.function_name,
+                        address=instruction["address"],
+                        swc_id="Unrestricted call to Suicide Instruction",
+                        bytecode=call.environment.code.bytecode,
+                        title="Unrestricted call to Suicide Instruction",
+                        _type="Warning",)
+                        # description=description,)
+                    issue.add_code_info(self.contract)
 
-        except:
-            print('unsat condition, skipping')
+                    print("unrestricted call found")
+                return issue
+
+            except:
+                print('unsat condition, skipping')
+        else:
+            proposition = call.state.mstate.constraints
+            try:
+                model = solver.get_model(proposition)
+                # if the CALL is unrestricted by the caller, it is a violation
+                if not re.search(r"caller", str(proposition)) and re.search(r"caller", str(call.to)):
+                    debug = solver.get_transaction_sequence(call.state, proposition)
+
+                    issue = Issue(
+                        contract=call.state.node.contract_name,
+                        function_name=call.state.node.function_name,
+                        address=call.state.instruction["address"],
+                        swc_id="Unrestricted call to State Variable",
+                        bytecode=call.state.environment.code.bytecode,
+                        title="Unrestricted call to State Variable",
+                        _type="Warning",
+                        # description=description,
+                        debug=debug)
+                    issue.add_code_info(self.contract)
+
+                    print("unrestricted call found")
+                    return issue
+                else:
+                    print("the caller is constrained to the write")
+
+            except:
+                print('unsat condition, skipping')
 
     def _allowed_state_change_after_external_call(self):
         pass
@@ -271,8 +289,7 @@ class CustomCheck:
                 Not(Extract(159, 0, transaction.caller) == 0)
             )
 
-    @staticmethod
-    def _check_unrestricted_write_helper(state):
+    def _check_unrestricted_write_helper(self, state):
 
         proposition = state.state.mstate.constraints
         try:
@@ -294,6 +311,7 @@ class CustomCheck:
                     # description=description,
                     debug=debug)
 
+                issue.add_code_info(self.contract)
                 print("unrestricted write found")
             return issue
 
@@ -330,7 +348,7 @@ class CustomCheck:
     '''
     Custom Checks
     '''
-    def custom_check(self, conditions, actions, offset = None):
+    def custom_check(self, condition, actions, target_variable=None):
         # parse actions
         func_dict = {Action.CHECK_CALLER_AGAINST_STATE_VARIABLE: self._check_against_state_variable,
                      Action.CHECK_STATE_VARIABLE_VALUE: self._check_state_variable_value,
@@ -338,15 +356,45 @@ class CustomCheck:
 
         instructions = []
         # parse conditions
-        if Condition.EXTERNAL_CALL or Condition.ETHER_SEND in conditions:
+        if condition == Condition.EXTERNAL_CALL:
             instructions.append('CALL')
-            if self.state_spaces.calls is not None and len(self.state_spaces.calls) != 0:
+            if self.state_spaces.calls is not None and len(self.state_spaces.calls) > 0:
                 for call in self.state_spaces.calls:
                     for action in actions:
-                        self.issues.append(func_dict[action](call, offset))
+                        issue = func_dict[action](call, suicide=False, target_variable=target_variable)
+                        if issue is not None:
+                            self.issues.append(issue)
 
+            else:
+                print('no external call instruction exist in source code, skipping')
+        elif Condition.SUICIDE == condition:
+            for k in self.state_spaces.nodes:
+                node = self.state_spaces.nodes[k]
+                for state in node.states:
+                    for action in actions:
+                        issue = func_dict[action](state, node=node, suicide=True, target_variable=target_variable)
+                        if issue is not None:
+                            self.issues.append(issue)
 
-        if Condition.SUICIDE in conditions:
-            instructions.append('SUICIDE')
+    def _check_state_variable_value(self, state, target_variable, node=None,  suicide=False):
+        if target_variable is None or target_variable not in self.offset_mapping:
+            print('the target_variable provided is None or not in offset mapping, please double check')
+            return
 
+        if suicide:
+            instruction = state.get_current_instruction()
+            if instruction["opcode"] != "SUICIDE":
+                return
 
+            index = self.offset_mapping[target_variable]
+            for key, item in state.accounts.items():
+                if key != "0x0000000000000000000000000000000000000000":
+                    storage_value = item.storage[index]
+                    print('storage value at target_variable is: ' + str(storage_value))
+
+        else:
+            index = self.offset_mapping[target_variable]
+            for key, item in state.state.accounts.items():
+                if key != "0x0000000000000000000000000000000000000000":
+                    storage_value = item.storage[index]
+                    print('storage value at target_variable is: ' + str(storage_value))

@@ -12,8 +12,9 @@ contract Caller {
         _;
     }
 
-    function ownerCall() public onlyManager{
+    function ownerCall(address addr) public onlyManager{
         msg.sender.call();
+        selfdestruct(addr);
     }
 
 }

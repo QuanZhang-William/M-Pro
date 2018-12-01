@@ -22,7 +22,7 @@ class Action:
     CHECK_STATE_VARIABLE_VALUE = "check_state_variable_value"
     CHECK_UNRESTRICTED_CALL = "check_unrestricted_call"
     CHECK_CALLER_AGAINST_STATE_VARIABLE = "check_caller_against_state_variable"
-    ALLOWED_STATE_CHANGE_AFTER_EXTERNAL_CALL = "allowed_state_change_after_external_call"
+    #ALLOWED_STATE_CHANGE_AFTER_EXTERNAL_CALL = "allowed_state_change_after_external_call"
 
 
 class StateVariableParser:
