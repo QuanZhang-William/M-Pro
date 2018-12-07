@@ -10,5 +10,5 @@ file_name = "example_contracts/immutableExample.sol"
 contract_name = "UnristrictedWrite"
 call_depth = 1
 custom_check = CustomCheck(file_name, contract_name, call_depth)
-custom_check.immutable_check("b")
+custom_check.immutable_check("a")
 custom_check.generate_report()

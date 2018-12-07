@@ -9,5 +9,5 @@ contract_name = "UnristrictedWrite"
 call_depth = 1
 custom_check = CustomCheck(file_name, contract_name, call_depth)
 
-custom_check.check_unrestricted_write("manager")
+custom_check.check_unrestricted_write("owner")
 custom_check.generate_report()

@@ -16,4 +16,7 @@ contract UnristrictedWrite {
         manager = 10;
     }
 
+    function writeOwner(address addr) public{
+        owner = addr;
+    }
 }

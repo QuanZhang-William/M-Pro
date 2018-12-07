@@ -7,14 +7,14 @@ contract Caller {
 		manager = 10;
 	}
 
-    modifier onlyManager(){
-        require(10 == manager);
+    modifier onlyOwner(){
+        require(msg.sender == owner);
         _;
     }
 
-    function ownerCall(address addr) public onlyManager{
+    function ownerCall() public{
         msg.sender.call();
-        selfdestruct(addr);
+        selfdestruct(msg.sender);
     }
 
 }
