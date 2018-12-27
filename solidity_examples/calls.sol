@@ -1,21 +1,33 @@
 contract Caller {
-    uint public a = 10;
-    uint public b = 0;
 
-    function readA() public returns(uint returnA){
-        return a;
-    }
+	address public fixed_address;
+	address public stored_address;
 
-    function writeA(uint input) public{
-        a = input;
-    }
+	uint256 statevar;
 
-    function readB() public returns(uint returnA){
-        return b;
-    }
+	constructor(address addr) public {
+		fixed_address = addr;
+	}
 
-    function writB(uint input) public{
-        readB();
+	function thisisfine() public {
+	    fixed_address.call("");
+	}
 
-    }
+	function reentrancy() public {
+	    fixed_address.call("");
+	    statevar = 0;
+	}
+
+	function calluseraddress(address addr) public {
+	    addr.call("");
+	}
+
+	function callstoredaddress() public {
+	    stored_address.call("");
+	}
+
+	function setstoredaddress(address addr) public {
+	    stored_address = addr;
+	}
+
 }

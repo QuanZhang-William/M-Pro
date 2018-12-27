@@ -75,6 +75,7 @@ class SymExecWrapper:
         self.nodes = self.laser.nodes
         self.edges = self.laser.edges
 
+        print('total states: ' + str(self.laser.total_states))
         # Generate lists of interesting operations
 
         self.calls = []
