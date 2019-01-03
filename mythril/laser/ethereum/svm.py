@@ -1,7 +1,12 @@
 import logging
+from collections import defaultdict
+from ethereum.opcodes import opcodes
 from typing import List, Tuple, Union, Callable, Dict
+from mythril.analysis.security import get_detection_modules
 from mythril.disassembler.disassembly import Disassembly
-from mythril.laser.ethereum.state import WorldState, GlobalState
+from mythril.laser.ethereum.state.account import Account
+from mythril.laser.ethereum.state.world_state import WorldState
+from mythril.laser.ethereum.state.global_state import GlobalState
 from mythril.laser.ethereum.transaction import (
     TransactionStartSignal,
     TransactionEndSignal,
@@ -10,7 +15,6 @@ from mythril.laser.ethereum.transaction import (
 from mythril.laser.ethereum.evm_exceptions import StackUnderflowException
 from mythril.laser.ethereum.instructions import Instruction
 from mythril.laser.ethereum.cfg import NodeFlags, Node, Edge, JumpType
-from mythril.laser.ethereum.state import Account
 from mythril.laser.ethereum.strategy.basic import DepthFirstSearchStrategy
 from datetime import datetime, timedelta
 from copy import copy
@@ -45,7 +49,7 @@ class LaserEVM:
         execution_timeout=60,
         create_timeout=10,
         strategy=DepthFirstSearchStrategy,
-        max_transaction_count=3,
+        transaction_count=2,
     ):
         world_state = WorldState()
         world_state.accounts = accounts
@@ -65,15 +69,15 @@ class LaserEVM:
         self.work_list = []
         self.strategy = strategy(self.work_list, max_depth)
         self.max_depth = max_depth
-        self.max_transaction_count = max_transaction_count
+        self.transaction_count = transaction_count
 
         self.execution_timeout = execution_timeout
         self.create_timeout = create_timeout
 
         self.time = None
 
-        self.pre_hooks = {}
-        self.post_hooks = {}
+        self.pre_hooks = defaultdict(list)
+        self.post_hooks = defaultdict(list)
 
         self.first_order_work_list = ['RAW']
         self.second_order_work_list = ['WAR']
@@ -91,6 +95,19 @@ class LaserEVM:
         logging.info(
             "LASER EVM initialized with dynamic loader: " + str(dynamic_loader)
         )
+
+    def register_hooks(self, hook_type: str, hook_dict: Dict[str, List[Callable]]):
+        if hook_type == "pre":
+            entrypoint = self.pre_hooks
+        elif hook_type == "post":
+            entrypoint = self.post_hooks
+        else:
+            raise ValueError(
+                "Invalid hook type %s. Must be one of {pre, post}", hook_type
+            )
+
+        for op_code, funcs in hook_dict.items():
+            entrypoint[op_code].extend(funcs)
 
     @property
     def accounts(self) -> Dict[str, Account]:
@@ -151,7 +168,7 @@ class LaserEVM:
         :return:
         """
         self.coverage = {}
-        for i in range(self.max_transaction_count):
+        for i in range(self.transaction_count):
             initial_coverage = self._get_covered_instructions()
 
             self.time = datetime.now()
@@ -162,8 +179,11 @@ class LaserEVM:
                 heuristic_message_call(self, address, priority)
 
             end_coverage = self._get_covered_instructions()
-            if end_coverage == initial_coverage:
-                break
+
+            logging.info(
+                "Number of new instructions covered in tx %d: %d"
+                % (i, end_coverage - initial_coverage)
+            )
 
     def _get_covered_instructions(self) -> int:
         """ Gets the total number of covered instructions for all accounts in the svm"""
@@ -174,14 +194,16 @@ class LaserEVM:
             )
         return total_covered_instructions
 
-    def exec(self, create=False, priority=None, title=None, laser_obj=None) -> None:
+    def exec(self, create=False, priority=None, title=None, laser_obj=None, track_gas=False) ->  Union[List[GlobalState], None]:
+        final_states = []
         for global_state in self.strategy:
             if self.execution_timeout and not create:
                 if self.time + timedelta(seconds=self.execution_timeout) <= datetime.now():
-                    return
+                    return final_states + [global_state] if track_gas else None
+
             elif self.create_timeout and create:
                 if self.time + timedelta(seconds=self.create_timeout) <= datetime.now():
-                    return
+                    return final_states + [global_state] if track_gas else None
 
             try:
                 new_states, op_code = self.execute_state(global_state, priority, title, laser_obj=laser_obj)
@@ -194,8 +216,14 @@ class LaserEVM:
             if self.bad_bit:
                 new_states.pop()
                 self.bad_bit = False
-            self.work_list += new_states
+
+            if new_states:
+                self.work_list += new_states
+            elif track_gas:
+                final_states.append(global_state)
+
             self.total_states += len(new_states)
+        return final_states if track_gas else None
 
     def execute_state(
         self, global_state: GlobalState, priority=None, title=None, laser_obj=None
@@ -415,7 +443,7 @@ class LaserEVM:
             for global_state in global_states:
                 hook(global_state)
 
-    def hook(self, op_code: str) -> Callable:
+    def pre_hook(self, op_code: str) -> Callable:
         def hook_decorator(func: Callable):
             if op_code not in self.pre_hooks.keys():
                 self.pre_hooks[op_code] = []

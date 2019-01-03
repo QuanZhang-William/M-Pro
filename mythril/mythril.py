@@ -15,6 +15,7 @@ import logging
 import json
 import os
 import re
+from pathlib import Path
 
 from ethereum import utils
 import codecs
@@ -23,9 +24,9 @@ import solc
 from configparser import ConfigParser
 import platform
 
-from mythril.ether import util
-from mythril.ether.ethcontract import ETHContract
-from mythril.ether.soliditycontract import SolidityContract, get_contracts_from_file
+from mythril.ethereum import util
+from mythril.ethereum.evmcontract import EVMContract
+from mythril.solidity.soliditycontract import SolidityContract, get_contracts_from_file
 from mythril.ethereum.interface.rpc.client import EthJsonRpc
 from mythril.ethereum.interface.rpc.exceptions import ConnectionError
 from mythril.support import signatures
@@ -110,25 +111,10 @@ class Mythril(object):
 
         self.mythril_dir = self._init_mythril_dir()
 
-        self.sigs = signatures.SignatureDb(
+        # tries mythril_dir/signatures.db by default (provide path= arg to make this configurable)
+        self.sigs = signatures.SignatureDB(
             enable_online_lookup=self.enable_online_lookup
         )
-        try:
-            self.sigs.open()  # tries mythril_dir/signatures.json by default (provide path= arg to make this configurable)
-        except FileNotFoundError:
-            logging.info(
-                "No signature database found. Creating database if sigs are loaded in: "
-                + self.sigs.signatures_file
-                + "\n"
-                + "Consider replacing it with the pre-initialized database at https://raw.githubusercontent.com/ConsenSys/mythril/master/signatures.json"
-            )
-        except json.JSONDecodeError as jde:
-            raise CriticalError(
-                "Invalid JSON in signatures file "
-                + self.sigs.signatures_file
-                + "\n"
-                + str(jde)
-            )
 
         self.solc_binary = self._init_solc_binary(solv)
         self.config_path = os.path.join(self.mythril_dir, "config.ini")
@@ -237,34 +223,33 @@ class Mythril(object):
         # Figure out solc binary and version
         # Only proper versions are supported. No nightlies, commits etc (such as available in remix)
 
-        if version:
-            # tried converting input to semver, seemed not necessary so just slicing for now
-            if version == str(solc.main.get_solc_version())[:6]:
-                logging.info("Given version matches installed version")
-                try:
-                    solc_binary = os.environ["SOLC"]
-                except KeyError:
-                    solc_binary = "solc"
-            else:
-                if util.solc_exists(version):
-                    logging.info("Given version is already installed")
-                else:
-                    try:
-                        solc.install_solc("v" + version)
-                    except SolcError:
-                        raise CriticalError(
-                            "There was an error when trying to install the specified solc version"
-                        )
+        if not version:
+            return os.environ.get("SOLC") or "solc"
 
-                solc_binary = os.path.join(
-                    os.environ["HOME"], ".py-solc/solc-v" + version, "bin/solc"
-                )
-                logging.info("Setting the compiler to " + str(solc_binary))
+        # tried converting input to semver, seemed not necessary so just slicing for now
+        main_version = solc.main.get_solc_version_string()
+        main_version_number = re.match(r"\d+.\d+.\d+", main_version)
+        if main_version is None:
+            raise CriticalError(
+                "Could not extract solc version from string {}".format(main_version)
+            )
+        if version == main_version_number:
+            logging.info("Given version matches installed version")
+            solc_binary = os.environ.get("SOLC") or "solc"
         else:
-            try:
-                solc_binary = os.environ["SOLC"]
-            except KeyError:
-                solc_binary = "solc"
+            solc_binary = util.solc_exists(version)
+            if solc_binary:
+                logging.info("Given version is already installed")
+            else:
+                try:
+                    solc.install_solc("v" + version)
+                except SolcError:
+                    raise CriticalError(
+                        "There was an error when trying to install the specified solc version"
+                    )
+
+            logging.info("Setting the compiler to %s", solc_binary)
+
         return solc_binary
 
     def set_api_leveldb(self, leveldb):
@@ -333,11 +318,13 @@ class Mythril(object):
 
         print(self.eth_db.contract_hash_to_address(hash))
 
-    def load_from_bytecode(self, code, bin_runtime=False):
-        address = util.get_indexed_address(0)
+    def load_from_bytecode(self, code, bin_runtime=False, address=None):
+
+        if address is None:
+            address = util.get_indexed_address(0)
         if bin_runtime:
             self.contracts.append(
-                ETHContract(
+                EVMContract(
                     code=code,
                     name="MAIN",
                     enable_online_lookup=self.enable_online_lookup,
@@ -345,7 +332,7 @@ class Mythril(object):
             )
         else:
             self.contracts.append(
-                ETHContract(
+                EVMContract(
                     creation_code=code,
                     name="MAIN",
                     enable_online_lookup=self.enable_online_lookup,
@@ -374,7 +361,7 @@ class Mythril(object):
                 )
             else:
                 self.contracts.append(
-                    ETHContract(
+                    EVMContract(
                         code,
                         name=address,
                         enable_online_lookup=self.enable_online_lookup,
@@ -400,12 +387,9 @@ class Mythril(object):
 
             try:
                 # import signatures from solidity source
-                self.sigs.import_from_solidity_source(
+                self.sigs.import_solidity_file(
                     file, solc_binary=self.solc_binary, solc_args=self.solc_args
                 )
-                # Save updated function signatures
-                self.sigs.write()  # dump signatures to disk (previously opened file or default location)
-
                 if contract_name is not None:
                     contract = SolidityContract(
                         input_file=file,
@@ -653,7 +637,7 @@ class Mythril(object):
         max_depth=None,
         execution_timeout=None,
         create_timeout=None,
-        max_transaction_count=None,
+        transaction_count=None,
     ):
 
         all_issues = []
@@ -670,7 +654,7 @@ class Mythril(object):
                 max_depth=max_depth,
                 execution_timeout=execution_timeout,
                 create_timeout=create_timeout,
-                max_transaction_count=max_transaction_count,
+                transaction_count=transaction_count,
             )
 
             issues = fire_lasers(sym, modules)

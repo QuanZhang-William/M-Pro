@@ -1,14 +1,22 @@
-from z3 import BitVec, Extract, Not
+from z3 import BitVec, BitVecVal
 from logging import debug
 
 from mythril.disassembler.disassembly import Disassembly
 from mythril.laser.ethereum.cfg import Node, Edge, JumpType
-from mythril.laser.ethereum.state import CalldataType, Account, Calldata
+from mythril.laser.ethereum.state.calldata import (
+    CalldataType,
+    BaseCalldata,
+    SymbolicCalldata,
+)
+from mythril.laser.ethereum.state.account import Account
 from mythril.laser.ethereum.transaction.transaction_models import (
     MessageCallTransaction,
     ContractCreationTransaction,
     get_next_transaction_id,
 )
+
+CREATOR_ADDRESS = 0xAFFEAFFEAFFEAFFEAFFEAFFEAFFEAFFEAFFEAFFE
+ATTACKER_ADDRESS = 0xDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF
 
 
 def heuristic_message_call(laser_evm, callee_address: str, priority=None):
@@ -88,7 +96,7 @@ def heuristic_message_call_helper(laser_evm, callee_address: str, priority=None)
                 callee_account=open_world_state[callee_address],
                 caller=BitVec("caller{}".format(next_transaction_id), 256),
                 identifier=next_transaction_id,
-                call_data=Calldata(next_transaction_id),
+                call_data=SymbolicCalldata(next_transaction_id),
                 gas_price=BitVec("gas_price{}".format(next_transaction_id), 256),
                 call_value=BitVec("call_value{}".format(next_transaction_id), 256),
                 origin=BitVec("origin{}".format(next_transaction_id), 256),
@@ -114,6 +122,7 @@ def heuristic_message_call_helper(laser_evm, callee_address: str, priority=None)
 
 
 def execute_message_call(laser_evm, callee_address: str, priority=None) -> None:
+
     """ Executes a message call transaction from all open states """
     # TODO: Resolve circular import between .transaction and ..svm to import LaserEVM here
     # TODO: if the function of openstate.node.funcname is not in priority list, dont add it
@@ -163,14 +172,15 @@ def execute_message_call(laser_evm, callee_address: str, priority=None) -> None:
         next_transaction_id = get_next_transaction_id()
         transaction = MessageCallTransaction(
             world_state=open_world_state,
-            callee_account=open_world_state[callee_address],
-            caller=BitVec("caller{}".format(next_transaction_id), 256),
             identifier=next_transaction_id,
-            call_data=Calldata(next_transaction_id),
             gas_price=BitVec("gas_price{}".format(next_transaction_id), 256),
-            call_value=BitVec("call_value{}".format(next_transaction_id), 256),
+            gas_limit=8000000,  # block gas limit
             origin=BitVec("origin{}".format(next_transaction_id), 256),
+            caller=BitVecVal(ATTACKER_ADDRESS, 256),
+            callee_account=open_world_state[callee_address],
+            call_data=SymbolicCalldata(next_transaction_id),
             call_data_type=CalldataType.SYMBOLIC,
+            call_value=BitVec("call_value{}".format(next_transaction_id), 256),
         )
 
         # the open states from last iterations are appended to work list here
@@ -196,16 +206,17 @@ def execute_contract_creation(
     for open_world_state in open_states:
         next_transaction_id = get_next_transaction_id()
         transaction = ContractCreationTransaction(
-            open_world_state,
-            BitVec("creator{}".format(next_transaction_id), 256),
-            next_transaction_id,
-            new_account,
-            Disassembly(contract_initialization_code),
-            [],
-            BitVec("gas_price{}".format(next_transaction_id), 256),
-            BitVec("call_value{}".format(next_transaction_id), 256),
-            BitVec("origin{}".format(next_transaction_id), 256),
-            CalldataType.SYMBOLIC,
+            world_state=open_world_state,
+            identifier=next_transaction_id,
+            gas_price=BitVec("gas_price{}".format(next_transaction_id), 256),
+            gas_limit=8000000,  # block gas limit
+            origin=BitVec("origin{}".format(next_transaction_id), 256),
+            code=Disassembly(contract_initialization_code),
+            caller=BitVecVal(CREATOR_ADDRESS, 256),
+            callee_account=new_account,
+            call_data=[],
+            call_data_type=CalldataType.SYMBOLIC,
+            call_value=BitVec("call_value{}".format(next_transaction_id), 256),
         )
         _setup_global_state_for_execution(laser_evm, transaction)
     laser_evm.exec(True)

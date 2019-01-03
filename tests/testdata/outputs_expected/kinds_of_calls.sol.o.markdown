@@ -6,6 +6,7 @@
 - Contract: Unknown
 - Function name: `_function_0x141f32ff`
 - PC address: 626
+- Estimated Gas Usage: 1104 - 35856
 
 ### Description
 
@@ -17,21 +18,23 @@ The return value of an external call is not checked. Note that execution continu
 - Contract: Unknown
 - Function name: `_function_0x9b58bc26`
 - PC address: 857
+- Estimated Gas Usage: 1167 - 35919
 
 ### Description
 
 The return value of an external call is not checked. Note that execution continue even if the called contract throws.
 
-## Message call to external contract
+## External call to user-supplied address
 - SWC ID: 107
 - Type: Warning
 - Contract: Unknown
 - Function name: `_function_0xeea4c864`
 - PC address: 1038
+- Estimated Gas Usage: 477 - 1229
 
 ### Description
 
-This contract executes a message call to an address provided as a function argument. Generally, it is not recommended to call user-supplied addresses using Solidity's call() construct. Note that attackers might leverage reentrancy attacks to exploit race conditions or manipulate this contract's state.
+The contract executes a function call with high gas to a user-supplied address. Note that the callee can contain arbitrary code and may re-enter any function in this contract. Review the business logic carefully to prevent unanticipated effects on the contract state.
 
 ## Unchecked CALL return value
 - SWC ID: 104
@@ -39,6 +42,7 @@ This contract executes a message call to an address provided as a function argum
 - Contract: Unknown
 - Function name: `_function_0xeea4c864`
 - PC address: 1046
+- Estimated Gas Usage: 1192 - 35944
 
 ### Description
 
