@@ -6,16 +6,19 @@
 """
 
 import sys
-sys.path.insert(0, '/Users/apple/git/slither/slither')
-sys.path.insert(0, '/Users/apple/git/slither')
+import os
+
+path1 = os.path.realpath('../slither/slither')   # 表示当前所处的文件夹的绝对路径
+path2 = os.path.realpath('../slither')
+
+sys.path.insert(0, path1)
+sys.path.insert(0, path2)
 print(sys.path)
+
 from slither import slither
 
 import logging
-import json
-import os
 import re
-from pathlib import Path
 
 from ethereum import utils
 import codecs
@@ -41,7 +44,6 @@ from mythril.analysis.report import Report
 from mythril.ethereum.interface.leveldb.client import EthLevelDB
 
 # logging.basicConfig(level=logging.DEBUG)
-
 
 
 class MappingObjTuple:
