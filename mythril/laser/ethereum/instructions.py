@@ -1090,6 +1090,7 @@ class Instruction:
 
     def _true_branch(self, condition, global_state, jump_addr, disassembly):
         # Get jump destination
+        min_gas, max_gas = OPCODE_GAS["JUMPI"]
         index = util.get_instruction_index(disassembly.instruction_list, jump_addr)
         if not index:
             logging.debug("Invalid jump destination: " + str(jump_addr))
@@ -1103,6 +1104,9 @@ class Instruction:
                         type(condi) == BoolRef and not is_false(condi)
             ):
                 new_state = self.copy_helper(global_state)
+                new_state.mstate.min_gas_used += min_gas
+                new_state.mstate.max_gas_used += max_gas
+
                 new_state.mstate.pc = index
                 new_state.mstate.depth += 1
                 new_state.mstate.constraints.append(condi)
@@ -1110,8 +1114,8 @@ class Instruction:
             else:
                 logging.debug("Pruned unreachable states.")
 
-
     def _false_branch(self, condition, global_state):
+        min_gas, max_gas = OPCODE_GAS["JUMPI"]
         negated = (
             simplify(Not(condition)) if type(condition) == BoolRef else condition == 0
         )
@@ -1120,6 +1124,10 @@ class Instruction:
                     type(negated) == BoolRef and not is_false(negated)
         ):
             new_state = self.copy_helper(global_state)
+
+            new_state.mstate.min_gas_used += min_gas
+            new_state.mstate.max_gas_used += max_gas
+
             new_state.mstate.depth += 1
             new_state.mstate.pc += 1
             new_state.mstate.constraints.append(negated)
@@ -1142,6 +1150,8 @@ class Instruction:
         except TypeError:
             logging.debug("Skipping JUMPI to invalid destination.")
             global_state.mstate.pc += 1
+            global_state.mstate.min_gas_used += min_gas
+            global_state.mstate.max_gas_used += max_gas
             return [global_state]
 
         global heuristic_branching
@@ -1243,7 +1253,14 @@ class Instruction:
                 if (type(condi) == bool and condi) or (
                     type(condi) == BoolRef and not is_false(condi)
                 ):
+
                     new_state = self.copy_helper(global_state)
+
+                    # add JUMPI gas cost
+                    new_state.mstate.min_gas_used += min_gas
+                    new_state.mstate.max_gas_used += max_gas
+
+
                     new_state.mstate.pc = index
                     new_state.mstate.depth += 1
                     new_state.mstate.constraints.append(condi)
