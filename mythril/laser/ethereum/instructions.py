@@ -1088,47 +1088,47 @@ class Instruction:
         return [new_state]
 
 
-def _true_branch(self, condition, global_state, jump_addr, disassembly):
-    # Get jump destination
-    index = util.get_instruction_index(disassembly.instruction_list, jump_addr)
-    if not index:
-        logging.debug("Invalid jump destination: " + str(jump_addr))
-        return
+    def _true_branch(self, condition, global_state, jump_addr, disassembly):
+        # Get jump destination
+        index = util.get_instruction_index(disassembly.instruction_list, jump_addr)
+        if not index:
+            logging.debug("Invalid jump destination: " + str(jump_addr))
+            return
 
-    instr = disassembly.instruction_list[index]
+        instr = disassembly.instruction_list[index]
 
-    condi = simplify(condition) if type(condition) == BoolRef else condition != 0
-    if instr["opcode"] == "JUMPDEST":
-        if (type(condi) == bool and condi) or (
-                    type(condi) == BoolRef and not is_false(condi)
+        condi = simplify(condition) if type(condition) == BoolRef else condition != 0
+        if instr["opcode"] == "JUMPDEST":
+            if (type(condi) == bool and condi) or (
+                        type(condi) == BoolRef and not is_false(condi)
+            ):
+                new_state = self.copy_helper(global_state)
+                new_state.mstate.pc = index
+                new_state.mstate.depth += 1
+                new_state.mstate.constraints.append(condi)
+                return new_state
+            else:
+                logging.debug("Pruned unreachable states.")
+
+
+    def _false_branch(self, condition, global_state):
+        negated = (
+            simplify(Not(condition)) if type(condition) == BoolRef else condition == 0
+        )
+
+        if (type(negated) == bool and negated) or (
+                    type(negated) == BoolRef and not is_false(negated)
         ):
             new_state = self.copy_helper(global_state)
-            new_state.mstate.pc = index
             new_state.mstate.depth += 1
-            new_state.mstate.constraints.append(condi)
+            new_state.mstate.pc += 1
+            new_state.mstate.constraints.append(negated)
+            # states.append(new_state)
             return new_state
         else:
             logging.debug("Pruned unreachable states.")
 
-
-def _false_branch(self, condition, global_state):
-    negated = (
-        simplify(Not(condition)) if type(condition) == BoolRef else condition == 0
-    )
-
-    if (type(negated) == bool and negated) or (
-                type(negated) == BoolRef and not is_false(negated)
-    ):
-        new_state = self.copy_helper(global_state)
-        new_state.mstate.depth += 1
-        new_state.mstate.pc += 1
-        new_state.mstate.constraints.append(negated)
-        # states.append(new_state)
-        return new_state
-    else:
-        logging.debug("Pruned unreachable states.")
-
-    @StateTransition(increment_pc=False)
+    @StateTransition(increment_pc=False,  enable_gas=False)
     def jumpi_(self, global_state: GlobalState) -> List[GlobalState]:
         state = global_state.mstate
         disassembly = global_state.environment.code

@@ -118,7 +118,6 @@ class LaserEVM:
         main_address=None,
         creation_code=None,
         contract_name=None,
-        max_transactions=3,
         priority=None
     ) -> None:
         logging.debug("Starting LASER execution")
@@ -201,9 +200,9 @@ class LaserEVM:
                 if self.time + timedelta(seconds=self.execution_timeout) <= datetime.now():
                     return final_states + [global_state] if track_gas else None
 
-            elif self.create_timeout and create:
-                if self.time + timedelta(seconds=self.create_timeout) <= datetime.now():
-                    return final_states + [global_state] if track_gas else None
+            #elif self.create_timeout and create:
+            #    if self.time + timedelta(seconds=self.create_timeout) <= datetime.now():
+            #        return final_states + [global_state] if track_gas else None
 
             try:
                 new_states, op_code = self.execute_state(global_state, priority, title, laser_obj=laser_obj)

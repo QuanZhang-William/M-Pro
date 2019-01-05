@@ -393,7 +393,7 @@ def main():
                     max_depth=args.max_depth,
                     execution_timeout=args.execution_timeout,
                     create_timeout=args.create_timeout,
-                    max_transaction_count=args.max_transaction_count,
+                    max_transaction_count=args.transaction_count,
                     file=args.solidity_file)
 
             '''

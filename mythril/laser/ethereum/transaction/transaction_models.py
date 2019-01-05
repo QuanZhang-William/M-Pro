@@ -95,9 +95,9 @@ class BaseTransaction:
 
         self.return_data = None
 
-    def initial_global_state_from_environment(self, environment, active_function, last_func_called=None):
+    def initial_global_state_from_environment(self, environment, active_function, last_function_called=None):
         # Initialize the execution environment
-        global_state = GlobalState(self.world_state, environment, None, last_function_called=last_func_called)
+        global_state = GlobalState(self.world_state, environment, None, last_function_called=last_function_called)
         global_state.environment.active_function_name = active_function
         return global_state
 
@@ -139,7 +139,7 @@ class ContractCreationTransaction(BaseTransaction):
             0, concrete_storage=True
         )
 
-    def initial_global_state(self) -> GlobalState:
+    def initial_global_state(self, last_func_called=None) -> GlobalState:
         """Initialize the execution environment"""
         environment = Environment(
             self.callee_account,

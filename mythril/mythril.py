@@ -472,7 +472,7 @@ class Mythril(object):
             execution_timeout=execution_timeout,
             create_timeout=create_timeout,
             priority=priority,
-            max_transaction_count=max_transaction_count
+            transaction_count=max_transaction_count
         )
         return generate_graph(sym, physics=enable_physics, phrackify=phrackify)
 
@@ -505,7 +505,7 @@ class Mythril(object):
             execution_timeout=execution_timeout,
             create_timeout=create_timeout,
             priority=priority,
-            max_transaction_count=max_transaction_count
+            transaction_count=max_transaction_count
         )
 
         issues = fire_lasers(sym, modules)

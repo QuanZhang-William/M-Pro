@@ -22,6 +22,7 @@ class GlobalState:
         transaction_stack=None,
         last_return_data=None,
         annotations=None,
+        last_function_called=None
     ):
         """ Constructor for GlobalState"""
         self.node = node
@@ -34,6 +35,7 @@ class GlobalState:
         self.op_code = ""
         self.last_return_data = last_return_data
         self.annotations = annotations or []
+        self.last_function_called = last_function_called
 
     def __copy__(self) -> "GlobalState":
         world_state = copy(self.world_state)
