@@ -70,10 +70,10 @@ class SymExecWrapper:
             )
         elif isinstance(contract, EVMContract) and contract.creation_code:
             self.laser.sym_exec(
-                creation_code=contract.creation_code, contract_name=contract.name
+                creation_code=contract.creation_code, contract_name=contract.name, priority=priority
             )
         else:
-            self.laser.sym_exec(address)
+            self.laser.sym_exec(address, priority=priority)
 
         self.nodes = self.laser.nodes
         self.edges = self.laser.edges

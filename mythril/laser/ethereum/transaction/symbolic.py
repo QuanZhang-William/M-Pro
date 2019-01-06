@@ -28,10 +28,12 @@ def heuristic_message_call(laser_evm, callee_address: str, priority=None):
 
 def heuristic_message_call_helper(laser_evm, callee_address: str, priority=None):
     jump = False
+
     for open_state in laser_evm.open_states:
         name = open_state.node.function_name
-        for list in priority['RAW']:
-            if name == list.first.function_name:
+
+        for priority_list in priority['RAW']:
+            if name == priority_list.first.function_name:
                 laser_evm.first_order_work_list.append(open_state)
                 laser_evm.open_states.remove(open_state)
                 jump = True
@@ -41,8 +43,8 @@ def heuristic_message_call_helper(laser_evm, callee_address: str, priority=None)
             jump = False
             continue
 
-        for list in priority['WAR']:
-            if name == list.first.function_name:
+        for priority_list in priority['WAR']:
+            if name == priority_list.first.function_name:
                 laser_evm.second_order_work_list.append(open_state)
                 laser_evm.open_states.remove(open_state)
                 jump = True
@@ -52,8 +54,8 @@ def heuristic_message_call_helper(laser_evm, callee_address: str, priority=None)
             jump = False
             continue
 
-        for list in priority['WAW']:
-            if name == list.first.function_name:
+        for priority_list in priority['WAW']:
+            if name == priority_list.first.function_name:
                 laser_evm.third_order_work_list.append(open_state)
                 laser_evm.open_states.remove(open_state)
                 jump = True
@@ -63,8 +65,8 @@ def heuristic_message_call_helper(laser_evm, callee_address: str, priority=None)
             jump = False
             continue
 
-        for list in priority['RAR']:
-            if name == list.first.function_name:
+        for priority_list in priority['RAR']:
+            if name == priority_list.first.function_name:
                 laser_evm.forth_order_work_list.append(open_state)
                 laser_evm.open_states.remove(open_state)
                 jump = True
@@ -107,6 +109,8 @@ def heuristic_message_call_helper(laser_evm, callee_address: str, priority=None)
             _setup_global_state_for_execution(laser_evm, transaction, last_func_called)
         laser_evm.exec(priority=priority, title=title, laser_obj=laser_evm)
 
+        # Execute the new open states added to the work list in Instruction.jumpi_ function
+
         if title == 'RAW':
             for gs in laser_evm.second_work_list:
                 laser_evm.work_list.append(gs)
@@ -130,38 +134,6 @@ def execute_message_call(laser_evm, callee_address: str, priority=None) -> None:
     # copy the open states from last iteration to this iteration
     # The working list is always empty when an iteration is done
     open_states = laser_evm.open_states[:]
-
-    '''
-    # if it is Call level 1, not unknown or not in priority "first", get rid of it
-    if len(open_states) > 0  and open_states[0].transaction_sequence == 2:
-        open_states = []
-
-
-                for open_state in laser_evm.open_states[:]:
-            func_visited = open_state.node.function_name
-            if func_visited is in priority['RAW'].values().first.function_name
-
-            for value in priority['RAW'].values():
-                if func_visited == value.first.function_name:
-                    open_states.append(open_state)
-                    continue
-            for value in priority['WAR'].values():
-                if func_visited == value.first.function_name:
-                    open_states.append(open_state)
-                    continue
-
-            for value in priority['WAW'].values():
-                if func_visited == value.first.function_name:
-                    open_states.append(open_state)
-                    continue
-
-            for value in priority['RAR'].values():
-                if func_visited == value.first.function_name:
-                    open_states.append(open_state)
-                    continue
-        '''
-
-
     del laser_evm.open_states[:]
 
     for open_world_state in open_states:
@@ -186,7 +158,7 @@ def execute_message_call(laser_evm, callee_address: str, priority=None) -> None:
         # the open states from last iterations are appended to work list here
         _setup_global_state_for_execution(laser_evm, transaction, open_world_state.node.function_name)
 
-    laser_evm.exec(priority=priority)
+    laser_evm.exec(priority=None)
 
 
 def execute_contract_creation(

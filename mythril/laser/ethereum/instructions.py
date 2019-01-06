@@ -1183,7 +1183,6 @@ class Instruction:
                     del global_state
                     return states
 
-
             false_state = self._false_branch(condition, global_state)
             # check following priority, and append them to lower order work list accordingly
             glb_func_called = global_state.last_function_called

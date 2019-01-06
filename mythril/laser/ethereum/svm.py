@@ -1,9 +1,6 @@
 import logging
 from collections import defaultdict
-from ethereum.opcodes import opcodes
 from typing import List, Tuple, Union, Callable, Dict
-from mythril.analysis.security import get_detection_modules
-from mythril.disassembler.disassembly import Disassembly
 from mythril.laser.ethereum.state.account import Account
 from mythril.laser.ethereum.state.world_state import WorldState
 from mythril.laser.ethereum.state.global_state import GlobalState
@@ -125,7 +122,7 @@ class LaserEVM:
 
         if main_address:
             logging.info("Starting message call transaction to {}".format(main_address))
-            self._execute_transactions(main_address)
+            self._execute_transactions(main_address, priority)
 
         elif creation_code:
             logging.info("Starting contract creation transaction")
@@ -172,6 +169,7 @@ class LaserEVM:
 
             self.time = datetime.now()
             logging.info("Starting message call transaction, iteration: {}".format(i))
+
             if priority is None:
                 execute_message_call(self, address, priority)
             else:

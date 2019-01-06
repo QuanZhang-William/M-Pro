@@ -478,13 +478,12 @@ class Mythril(object):
         )
         return generate_graph(sym, physics=enable_physics, phrackify=phrackify)
 
-    def slither_mythril(self,
+    def slither_mythril(
+        self,
         strategy,
         contract,
         address=None,
         max_depth=None,
-        enable_physics=False,
-        phrackify=False,
         execution_timeout=None,
         create_timeout=None,
         max_transaction_count=None,
@@ -492,7 +491,7 @@ class Mythril(object):
         verbose_report=False,
         file=None):
 
-        priority = self.parse_slither(True, contract=contract, file=file[0])
+        priority = self.parse_slither(contract=contract, file=file[0])
 
         sym = SymExecWrapper(
             contract,
@@ -527,50 +526,41 @@ class Mythril(object):
 
         return report
 
-
-    def parse_slither(self, treat_all_variables, contract=None, file=None):
+    def parse_slither(self, contract=None, file=None):
         if file is None:
             print('file is not specified for slither')
             return
-        slither1 = slither.Slither(file)
 
         if contract.name is None:
             print('contract cannot be none for slither')
             return
-        slither_contract = slither1.get_contract_from_name(contract.name)
 
-        #functions_writing_a = set()
-        #functions_reading_a = set()
+        slither_obj = slither.Slither(file)
+        slither_contract = slither_obj.get_contract_from_name(contract.name)
 
         functions_writing_a = {}
         functions_reading_a = {}
 
-        if treat_all_variables:
-            variables = slither_contract.get_all_state_variables()
-            for variable in variables:
-                if variable not in functions_writing_a:
-                    functions_writing_a[variable] = set()
-                for func in slither_contract.get_functions_writing_to_variable(variable):
-                    if func not in functions_writing_a[variable]:
-                        functions_writing_a[variable].add(func)
+        # Slither objects
+        variables = slither_contract.get_all_state_variables()
+        for variable in variables:
+            if variable not in functions_writing_a:
+                functions_writing_a[variable] = set()
+            for func in slither_contract.get_functions_writing_to_variable(variable):
+                if func not in functions_writing_a[variable]:
+                    functions_writing_a[variable].add(func)
 
-                if variable not in functions_reading_a:
-                    functions_reading_a[variable] = set()
-                for func in slither_contract.get_functions_reading_from_variable(variable):
-                    if func not in functions_reading_a[variable]:
-                        functions_reading_a[variable].add(func)
-        else:
-            # Get the variable
-            var_a = slither_contract.get_state_variable_from_name('collectedFees')
-            # Get the functions writing the variable
-            functions_writing_a = slither_contract.get_functions_writing_to_variable(var_a)
-            functions_reading_a = slither_contract.get_functions_reading_from_variable(var_a)
+            if variable not in functions_reading_a:
+                functions_reading_a[variable] = set()
+            for func in slither_contract.get_functions_reading_from_variable(variable):
+                if func not in functions_reading_a[variable]:
+                    functions_reading_a[variable].add(func)
 
         writing_obj_list = {}
         reading_obj_list = {}
 
-        #TODO: Deal With functions with same name in Slither
-
+        # TODO: Deal With functions with same name in Slither
+        # Parse to Mythril object
         for wt_key, wt_value in functions_writing_a.items():
             if wt_key not in writing_obj_list:
                 writing_obj_list[wt_key] = set()
@@ -587,45 +577,38 @@ class Mythril(object):
 
         priority = {}
 
-        RAW = []
-        WAR = []
-        WAW = []
-        RAR = []
-
-        '''
-        for write in writing_obj_list:
-            for read in reading_obj_list:
-                RAW.append(MappingObjTuple(write, read))
-        priority['RAW'] = RAW
-        '''
+        raw = []
+        war = []
+        waw = []
+        rar = []
 
         for wt_key, wt_value in writing_obj_list.items():
             if wt_key in reading_obj_list:
                 for temp in writing_obj_list[wt_key]:
                     for rd_value in reading_obj_list[wt_key]:
-                        RAW.append(MappingObjTuple(temp, rd_value))
-        priority['RAW'] = RAW
+                        raw.append(MappingObjTuple(temp, rd_value))
+        priority['RAW'] = raw
 
         for rd_key, rd_value in reading_obj_list.items():
             if rd_key in writing_obj_list:
                 for rd_value in reading_obj_list[rd_key]:
                     for temp in writing_obj_list[rd_key]:
-                        WAR.append(MappingObjTuple(rd_value, temp))
-        priority['WAR'] = WAR
+                        war.append(MappingObjTuple(rd_value, temp))
+        priority['WAR'] = war
 
         for rd_key, rd_value in reading_obj_list.items():
             for read1 in reading_obj_list[rd_key]:
                 for read2 in reading_obj_list[rd_key]:
                     if read1 != read2:
-                        RAR.append(MappingObjTuple(read1, read2))
-        priority['RAR'] = RAR
+                        rar.append(MappingObjTuple(read1, read2))
+        priority['RAR'] = rar
 
         for wt_key, wt_value in writing_obj_list.items():
             for write1 in writing_obj_list[wt_key]:
                 for write2 in writing_obj_list[wt_key]:
                     if write1 != write2:
-                        WAW.append(MappingObjTuple(write1, write2))
-        priority['WAW'] = WAW
+                        waw.append(MappingObjTuple(write1, write2))
+        priority['WAW'] = waw
 
         return priority
 
