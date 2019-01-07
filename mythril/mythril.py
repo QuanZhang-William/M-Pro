@@ -546,13 +546,13 @@ class Mythril(object):
         for variable in variables:
             if variable not in functions_writing_a:
                 functions_writing_a[variable] = set()
-            for func in slither_contract.get_functions_writing_to_variable(variable):
+            for func in slither_contract.get_functions_writing_to_variable_including_internal_call(variable):
                 if func not in functions_writing_a[variable]:
                     functions_writing_a[variable].add(func)
 
             if variable not in functions_reading_a:
                 functions_reading_a[variable] = set()
-            for func in slither_contract.get_functions_reading_from_variable(variable):
+            for func in slither_contract.get_functions_reading_from_variable_including_internal_call(variable):
                 if func not in functions_reading_a[variable]:
                     functions_reading_a[variable].add(func)
 
