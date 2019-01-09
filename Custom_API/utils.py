@@ -61,7 +61,7 @@ class StateVariableParser:
 
                     mapping[state_variable.name] = value
 
-            # User Defined structue
+            # User Defined structure
             elif isinstance(state_variable.type, UserDefinedType):
 
                 # Structure
@@ -90,18 +90,20 @@ class StateVariableParser:
 
         return mapping
 
-    def _calculate_storage_offset(self, key, position = None):
+    def _calculate_storage_offset(self, key, position=None):
         if position is None:
             return self._keccak256(self._bytes32(key))
 
         return self._keccak256(self._bytes32(key) + self._bytes32(position))
 
     # Convert a number to 32 bytes array.
-    def _bytes32(self, i):
+    @staticmethod
+    def _bytes32(i):
         return binascii.unhexlify('%064x' % i)
 
     # Calculate the keccak256 hash of a 32 bytes array.
-    def _keccak256(self, x):
+    @staticmethod
+    def _keccak256(x):
         return sha3.keccak_256(x).hexdigest()
 
 
