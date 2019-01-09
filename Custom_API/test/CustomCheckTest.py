@@ -4,7 +4,7 @@ from Custom_API.utils import Condition
 import sys
 sys.path.insert(0, '/Users/apple/git/slither/slither')
 sys.path.insert(0, '/Users/apple/git/slither')
-''''''
+
 file_name = "example_contracts/calls.sol"
 contract_name = "Caller"
 call_depth = 1

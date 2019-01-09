@@ -263,9 +263,6 @@ class CustomCheck:
             except:
                 print('unsat condition, skipping')
 
-    def _allowed_state_change_after_external_call(self):
-        pass
-
     @staticmethod
     def _check_unrestricted_condition(self, state, custom_target):
         if custom_target in self.offset_mapping:

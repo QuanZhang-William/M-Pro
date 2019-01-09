@@ -1,16 +1,17 @@
 import sys
-sys.path.insert(0, '/Users/apple/git/slither/slither')
-sys.path.insert(0, '/Users/apple/git/slither')
+import os
+
+sys.path.insert(0, os.path.realpath('../slither/slither'))
+sys.path.insert(0, os.path.realpath('../slither'))
 
 from slither.core.solidity_types import ArrayType
 from slither.core.solidity_types import UserDefinedType
 from slither.core.solidity_types import MappingType
 from slither.solc_parsing.declarations.structure import StructureSolc
 from slither.core.declarations.enum import Enum
-
-
 import binascii
 import sha3
+
 
 class Condition:
     ETHER_SEND = "ether_send"
@@ -22,7 +23,6 @@ class Action:
     CHECK_STATE_VARIABLE_VALUE = "check_state_variable_value"
     CHECK_UNRESTRICTED_CALL = "check_unrestricted_call"
     CHECK_CALLER_AGAINST_STATE_VARIABLE = "check_caller_against_state_variable"
-    #ALLOWED_STATE_CHANGE_AFTER_EXTERNAL_CALL = "allowed_state_change_after_external_call"
 
 
 class StateVariableParser:
