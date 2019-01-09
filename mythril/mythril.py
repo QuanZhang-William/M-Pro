@@ -460,7 +460,8 @@ class Mythril(object):
         max_transaction_count=2,
         file=None
     ):
-        priority = self.parse_slither(True, contract=contract, file=file[0])
+        priority = self.parse_slither(contract=contract, file=file[0])
+
         sym = SymExecWrapper(
             contract,
             address,
@@ -559,7 +560,6 @@ class Mythril(object):
         writing_obj_list = {}
         reading_obj_list = {}
 
-        # TODO: Deal With functions with same name in Slither
         # Parse to Mythril object
         for wt_key, wt_value in functions_writing_a.items():
             if wt_key not in writing_obj_list:
