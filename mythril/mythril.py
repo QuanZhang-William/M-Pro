@@ -8,7 +8,7 @@
 import sys
 import os
 
-path1 = os.path.realpath('../slither/slither')   # 表示当前所处的文件夹的绝对路径
+path1 = os.path.realpath('../slither/slither')
 path2 = os.path.realpath('../slither')
 
 sys.path.insert(0, path1)

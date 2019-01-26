@@ -1,6 +1,5 @@
 pragma solidity 0.5.0;
 
-
 contract Exceptions {
 
     uint256[8] myarray;

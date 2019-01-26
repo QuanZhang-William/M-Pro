@@ -96,13 +96,14 @@ def heuristic_message_call_helper(laser_evm, callee_address: str, priority=None)
             transaction = MessageCallTransaction(
                 world_state=open_world_state,
                 callee_account=open_world_state[callee_address],
-                caller=BitVec("caller{}".format(next_transaction_id), 256),
+                caller=BitVecVal(ATTACKER_ADDRESS, 256),
                 identifier=next_transaction_id,
                 call_data=SymbolicCalldata(next_transaction_id),
                 gas_price=BitVec("gas_price{}".format(next_transaction_id), 256),
                 call_value=BitVec("call_value{}".format(next_transaction_id), 256),
                 origin=BitVec("origin{}".format(next_transaction_id), 256),
                 call_data_type=CalldataType.SYMBOLIC,
+                gas_limit=8000000,  # block gas limit
             )
 
             # the open states from last iterations are appended to work list here
