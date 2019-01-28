@@ -59,6 +59,11 @@ def main():
     )
 
     commands.add_argument(
+        "--sgraph",
+        help="generate heuristic graph",
+    )
+
+    commands.add_argument(
         "--truffle",
         action="store_true",
         help="analyze a truffle project (run from project dir)",
@@ -252,6 +257,7 @@ def main():
         or args.statespace_json
         or args.contract_hash_to_address
         or args.slither
+        or args.sgraph
     ):
         parser.print_help()
         sys.exit()
@@ -374,17 +380,10 @@ def main():
             )
             print(storage)
 
-        elif args.disassemble:
-            easm_text = mythril.contracts[
-                0
-            ].get_easm()  # or mythril.disassemble(mythril.contracts[0])
-            sys.stdout.write(easm_text)
-
         elif args.slither:
             start = datetime.datetime.now()
             report = mythril.slither_mythril(
                     strategy=args.strategy,
-                    contract=mythril.contracts[0],
                     address=address,
                     modules=[m.strip() for m in args.modules.strip().split(",")]
                     if args.modules
@@ -393,19 +392,8 @@ def main():
                     max_depth=args.max_depth,
                     execution_timeout=args.execution_timeout,
                     create_timeout=args.create_timeout,
-                    max_transaction_count=args.transaction_count,
+                    transaction_count=args.transaction_count,
                     file=args.solidity_file)
-
-            '''
-                        try:
-                with open(args.graph, "w") as f:
-                    f.write(graph)
-
-                end = datetime.datetime.now()
-                print(end - start)
-            except Exception as e:
-                exit_with_error(args.outform, "Error saving graph: " + str(e))
-            '''
 
             outputs = {
                 "json": report.as_json(),
@@ -417,7 +405,7 @@ def main():
             end = datetime.datetime.now()
             print(end - start)
 
-        elif args.graph or args.fire_lasers:
+        elif args.graph or args.fire_lasers or args.sgraph:
             if not mythril.contracts:
                 exit_with_error(
                     args.outform, "input files do not contain any valid contracts"
@@ -433,9 +421,7 @@ def main():
                     phrackify=args.phrack,
                     max_depth=args.max_depth,
                     execution_timeout=args.execution_timeout,
-                    create_timeout=args.create_timeout,
-                    max_transaction_count=args.transaction_count,
-                    file=args.solidity_file
+                    create_timeout=args.create_timeout
                 )
 
                 try:
@@ -444,6 +430,29 @@ def main():
 
                     end = datetime.datetime.now()
                     print (end-start)
+                except Exception as e:
+                    exit_with_error(args.outform, "Error saving graph: " + str(e))
+
+            elif args.sgraph:
+                start = datetime.datetime.now()
+                html = mythril.slither_graph_html(
+                    strategy=args.strategy,
+                    contract=mythril.contracts[0],
+                    address=address,
+                    enable_physics=args.enable_physics,
+                    phrackify=args.phrack,
+                    max_depth=args.max_depth,
+                    execution_timeout=args.execution_timeout,
+                    create_timeout=args.create_timeout,
+                    file=args.solidity_file
+                )
+
+                try:
+                    with open(args.sgraph, "w") as f:
+                        f.write(html)
+
+                    end = datetime.datetime.now()
+                    print(end - start)
                 except Exception as e:
                     exit_with_error(args.outform, "Error saving graph: " + str(e))
 

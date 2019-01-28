@@ -457,7 +457,44 @@ class Mythril(object):
         phrackify=False,
         execution_timeout=None,
         create_timeout=None,
-        max_transaction_count=2,
+        enable_iprof=False,
+    ):
+        """
+        :param strategy:
+        :param contract:
+        :param address:
+        :param max_depth:
+        :param enable_physics:
+        :param phrackify:
+        :param execution_timeout:
+        :param create_timeout:
+        :return:
+        """
+        sym = SymExecWrapper(
+            contract,
+            address,
+            strategy,
+            dynloader=DynLoader(
+                self.eth,
+                storage_loading=self.onchain_storage_access,
+                contract_loading=self.dynld,
+            ),
+            max_depth=max_depth,
+            execution_timeout=execution_timeout,
+            create_timeout=create_timeout
+        )
+        return generate_graph(sym, physics=enable_physics, phrackify=phrackify)
+
+    def slither_graph_html(
+        self,
+        strategy,
+        contract,
+        address,
+        max_depth=None,
+        enable_physics=False,
+        phrackify=False,
+        execution_timeout=None,
+        create_timeout=None,
         file=None
     ):
         priority = self.parse_slither(contract=contract, file=file[0])
@@ -474,51 +511,51 @@ class Mythril(object):
             max_depth=max_depth,
             execution_timeout=execution_timeout,
             create_timeout=create_timeout,
-            priority=priority,
-            transaction_count=max_transaction_count
+            priority=priority
         )
         return generate_graph(sym, physics=enable_physics, phrackify=phrackify)
 
     def slither_mythril(
         self,
         strategy,
-        contract,
         address=None,
+        contracts=None,
         max_depth=None,
         execution_timeout=None,
         create_timeout=None,
-        max_transaction_count=None,
+        transaction_count=None,
         modules=None,
         verbose_report=False,
         file=None):
 
-        priority = self.parse_slither(contract=contract, file=file[0])
-
-        sym = SymExecWrapper(
-            contract,
-            address,
-            strategy,
-            dynloader=DynLoader(
-                self.eth,
-                storage_loading=self.onchain_storage_access,
-                contract_loading=self.dynld,
-            ),
-            max_depth=max_depth,
-            execution_timeout=execution_timeout,
-            create_timeout=create_timeout,
-            priority=priority,
-            transaction_count=max_transaction_count
-        )
-
-        issues = fire_lasers(sym, modules)
-
-        if type(contract) == SolidityContract:
-            for issue in issues:
-                issue.add_code_info(contract)
-
         all_issues = []
-        all_issues += issues
-        #return generate_graph(sym, physics=enable_physics, phrackify=phrackify)
+        for contract in contracts or self.contracts:
+            priority = self.parse_slither(contract=contract, file=file[0])
+            sym = SymExecWrapper(
+                contract,
+                address,
+                strategy,
+                dynloader=DynLoader(
+                    self.eth,
+                    storage_loading=self.onchain_storage_access,
+                    contract_loading=self.dynld,
+                ),
+                max_depth=max_depth,
+                execution_timeout=execution_timeout,
+                create_timeout=create_timeout,
+                priority=priority,
+                transaction_count=transaction_count
+            )
+
+            issues = fire_lasers(sym, modules)
+
+            if type(contract) == SolidityContract:
+                for issue in issues:
+                    issue.add_code_info(contract)
+
+            all_issues += issues
+
+
 
         # Finally, output the results
         report = Report(verbose_report)
