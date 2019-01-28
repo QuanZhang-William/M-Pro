@@ -8,12 +8,12 @@
 import sys
 import os
 
-path1 = os.path.realpath('../slither/slither')
-path2 = os.path.realpath('../slither')
+#path1 = os.path.realpath('../slither/slither')
+#path2 = os.path.realpath('../slither')
 
-sys.path.insert(0, path1)
-sys.path.insert(0, path2)
-print(sys.path)
+#sys.path.insert(0, path1)
+#sys.path.insert(0, path2)
+#print(sys.path)
 
 from slither import slither
 
