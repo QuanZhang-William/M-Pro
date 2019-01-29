@@ -481,7 +481,7 @@ class Mythril(object):
             ),
             max_depth=max_depth,
             execution_timeout=execution_timeout,
-            create_timeout=create_timeout
+            create_timeout=create_timeout,
         )
         return generate_graph(sym, physics=enable_physics, phrackify=phrackify)
 
