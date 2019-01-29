@@ -9,6 +9,7 @@ contract ReturnValue {
     callee.call("");
   }
 
+
   function callchecked() public {
     (bool success, bytes memory data) = callee.call("");
     require(success);

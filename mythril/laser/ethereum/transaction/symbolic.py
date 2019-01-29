@@ -1,6 +1,8 @@
 from z3 import BitVec, BitVecVal
 from logging import debug
 
+from copy import copy, deepcopy
+
 from mythril.disassembler.disassembly import Disassembly
 from mythril.laser.ethereum.cfg import Node, Edge, JumpType
 from mythril.laser.ethereum.state.calldata import (
@@ -29,7 +31,9 @@ def heuristic_message_call(laser_evm, callee_address: str, priority=None):
 def heuristic_message_call_helper(laser_evm, callee_address: str, priority=None):
     jump = False
 
-    for open_state in laser_evm.open_states:
+    open_states_copy = copy(laser_evm.open_states)
+
+    for open_state in open_states_copy:
         name = open_state.node.function_name
 
         for priority_list in priority['RAW']:

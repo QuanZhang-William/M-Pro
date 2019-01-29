@@ -3,7 +3,6 @@ import logging
 
 from copy import copy, deepcopy
 from typing import Callable, List, Union
-from functools import reduce
 
 from ethereum import utils
 from z3 import (
@@ -121,6 +120,8 @@ class StateTransition(object):
 
 
 heuristic_branching = False
+set_fallback_func = True
+fallback_pointer = 0
 
 
 class Instruction:
@@ -163,6 +164,7 @@ class Instruction:
 
     @StateTransition()
     def jumpdest_(self, global_state: GlobalState) -> List[GlobalState]:
+
         return [global_state]
 
     @StateTransition()
@@ -1147,6 +1149,16 @@ class Instruction:
 
         try:
             jump_addr = util.get_concrete_int(op0)
+
+            # set fall back pointer to handle fallback function
+            global set_fallback_func
+            # if fall back func is not set yet
+            if set_fallback_func:
+                if 'Not(ULE(4,calldatasize))' in str(condition):
+                    global fallback_pointer
+                    fallback_pointer = jump_addr
+                    set_fallback_func = False
+
         except TypeError:
             logging.debug("Skipping JUMPI to invalid destination.")
             global_state.mstate.pc += 1
@@ -1214,6 +1226,34 @@ class Instruction:
             return states
 
         else:
+            # True case
+            # Get jump destination
+            index = util.get_instruction_index(disassembly.instruction_list, jump_addr)
+            if not index:
+                logging.debug("Invalid jump destination: " + str(jump_addr))
+                return states
+
+            instr = disassembly.instruction_list[index]
+
+            condi = simplify(condition) if type(condition) == BoolRef else condition != 0
+            if instr["opcode"] == "JUMPDEST":
+                if (type(condi) == bool and condi) or (
+                            type(condi) == BoolRef and not is_false(condi)
+                ):
+
+                    new_state = self.copy_helper(global_state)
+
+                    # add JUMPI gas cost
+                    new_state.mstate.min_gas_used += min_gas
+                    new_state.mstate.max_gas_used += max_gas
+
+                    new_state.mstate.pc = index
+                    new_state.mstate.depth += 1
+                    new_state.mstate.constraints.append(condi)
+                    states.append(new_state)
+                else:
+                    logging.debug("Pruned unreachable states.")
+
             # False case
             negated = (
                 simplify(Not(condition)) if type(condition) == BoolRef else condition == 0
@@ -1237,35 +1277,7 @@ class Instruction:
             else:
                 logging.debug("Pruned unreachable states.")
 
-            # True case
 
-            # Get jump destination
-            index = util.get_instruction_index(disassembly.instruction_list, jump_addr)
-            if not index:
-                logging.debug("Invalid jump destination: " + str(jump_addr))
-                return states
-
-            instr = disassembly.instruction_list[index]
-
-            condi = simplify(condition) if type(condition) == BoolRef else condition != 0
-            if instr["opcode"] == "JUMPDEST":
-                if (type(condi) == bool and condi) or (
-                    type(condi) == BoolRef and not is_false(condi)
-                ):
-
-                    new_state = self.copy_helper(global_state)
-
-                    # add JUMPI gas cost
-                    new_state.mstate.min_gas_used += min_gas
-                    new_state.mstate.max_gas_used += max_gas
-
-
-                    new_state.mstate.pc = index
-                    new_state.mstate.depth += 1
-                    new_state.mstate.constraints.append(condi)
-                    states.append(new_state)
-                else:
-                    logging.debug("Pruned unreachable states.")
             del global_state
             return states
 
@@ -1724,6 +1736,4 @@ class Instruction:
         global_state_copy.last_function_called = state.last_function_called
 
         return global_state_copy
-
-
 

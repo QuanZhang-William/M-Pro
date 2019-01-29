@@ -17,4 +17,9 @@ contract Caller {
     function writB(uint input) public{
         b = input;
     }
+
+    function () external{
+        a = 100;
+    }
+
 }

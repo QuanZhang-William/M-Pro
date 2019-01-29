@@ -8,6 +8,8 @@
 import sys
 import os
 
+from mythril.disassembler.disassembly import MappingObj
+
 #path1 = os.path.realpath('../slither/slither')
 #path2 = os.path.realpath('../slither')
 
@@ -457,7 +459,8 @@ class Mythril(object):
         phrackify=False,
         execution_timeout=None,
         create_timeout=None,
-        enable_iprof=False,
+        transaction_count=2,
+        enable_iprof=False
     ):
         """
         :param strategy:
@@ -482,6 +485,7 @@ class Mythril(object):
             max_depth=max_depth,
             execution_timeout=execution_timeout,
             create_timeout=create_timeout,
+            transaction_count=transaction_count
         )
         return generate_graph(sym, physics=enable_physics, phrackify=phrackify)
 
@@ -564,7 +568,8 @@ class Mythril(object):
 
         return report
 
-    def parse_slither(self, contract=None, file=None):
+    @staticmethod
+    def parse_slither(contract=None, file=None):
         if file is None:
             print('file is not specified for slither')
             return
@@ -605,12 +610,21 @@ class Mythril(object):
                 if item.full_name in contract.disassembly.slither_mappings_dict:
                     writing_obj_list[wt_key].add(contract.disassembly.slither_mappings_dict[item.full_name])
 
+                if item.full_name == "fallback()":
+                    temp = MappingObj('fallback', '0x0000000', 0)
+                    writing_obj_list[wt_key].add(temp)
+
+
         for rd_key, rd_value in functions_reading_a.items():
             if rd_key not in reading_obj_list:
                 reading_obj_list[rd_key] = set()
             for item in rd_value:
                 if item.full_name in contract.disassembly.slither_mappings_dict:
                     reading_obj_list[rd_key].add(contract.disassembly.slither_mappings_dict[item.full_name])
+
+                if item.full_name == "fallback()":
+                    temp = MappingObj('fallback', '0x0000000', 0)
+                    reading_obj_list[rd_key].add(temp)
 
         priority = {}
 

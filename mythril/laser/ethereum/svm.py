@@ -22,6 +22,7 @@ from mythril.laser.ethereum.transaction import (
 )
 from functools import reduce
 from mythril.laser.ethereum.evm_exceptions import VmException
+from mythril.laser.ethereum.instructions import fallback_pointer
 
 
 class SVMError(Exception):
@@ -198,9 +199,9 @@ class LaserEVM:
                 if self.time + timedelta(seconds=self.execution_timeout) <= datetime.now():
                     return final_states + [global_state] if track_gas else None
 
-            #elif self.create_timeout and create:
-            #    if self.time + timedelta(seconds=self.create_timeout) <= datetime.now():
-            #        return final_states + [global_state] if track_gas else None
+            elif self.create_timeout and create:
+                if self.time + timedelta(seconds=self.create_timeout) <= datetime.now():
+                    return final_states + [global_state] if track_gas else None
 
             try:
                 new_states, op_code = self.execute_state(global_state, priority, title, laser_obj=laser_obj)
@@ -406,6 +407,7 @@ class LaserEVM:
 
         environment = state.environment
         disassembly = environment.code
+
         if address in disassembly.address_to_function_name:
             # Enter a new function
             environment.active_function_name = disassembly.address_to_function_name[
@@ -419,7 +421,7 @@ class LaserEVM:
                 + ":"
                 + new_node.function_name
             )
-        elif address == 0:
+        elif address == 0 or address == fallback_pointer:
             environment.active_function_name = "fallback"
 
         new_node.function_name = environment.active_function_name

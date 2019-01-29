@@ -421,7 +421,8 @@ def main():
                     phrackify=args.phrack,
                     max_depth=args.max_depth,
                     execution_timeout=args.execution_timeout,
-                    create_timeout=args.create_timeout
+                    create_timeout=args.create_timeout,
+                    transaction_count=args.transaction_count
                 )
 
                 try:
