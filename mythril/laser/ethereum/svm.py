@@ -197,10 +197,12 @@ class LaserEVM:
         for global_state in self.strategy:
             if self.execution_timeout and not create:
                 if self.time + timedelta(seconds=self.execution_timeout) <= datetime.now():
+                    print('############################execution_timeout timeout#######################')
                     return final_states + [global_state] if track_gas else None
 
             elif self.create_timeout and create:
                 if self.time + timedelta(seconds=self.create_timeout) <= datetime.now():
+                    print('############################creation timeout#######################')
                     return final_states + [global_state] if track_gas else None
 
             try:

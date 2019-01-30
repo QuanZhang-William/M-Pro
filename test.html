@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Call Graph</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" integrity="sha256-iq5ygGJ7021Pi7H5S+QAUXCPUfaBzfqeplbg/KlEssg=" crossorigin="anonymous" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js" integrity="sha256-JuQeAGbk9rG/EoRMixuy5X8syzICcvB0dj3KindZkY0=" crossorigin="anonymous"></script>
+
+    
+    <style type="text/css">
+        #mynetwork {
+          height: 100%;
+            background-color: #232625;
+        }
+        body {
+            background-color: #232625;
+            color: #ffffff;
+            font-size: 10px;
+        }
+        html, body {
+          height: 95%;
+        }
+    </style>
+    
+
+    <script>
+        var options = {"autoResize": true, "edges": {"font": {"align": "horizontal", "background": "none", "color": "#FFFFFF", "face": "arial", "multi": false, "strokeColor": "#ffffff", "strokeWidth": 0, "vadjust": 0}}, "height": "100%", "layout": {"hierarchical": {"blockShifting": true, "direction": "LR", "edgeMinimization": true, "enabled": true, "levelSeparation": 450, "nodeSpacing": 200, "parentCentralization": false, "sortMethod": "directed", "treeSpacing": 100}, "improvedLayout": true}, "manipulation": false, "nodes": {"borderWidth": 1, "borderWidthSelected": 2, "chosen": true, "color": "#000000", "font": {"align": "left", "color": "#FFFFFF"}, "shape": "box"}, "physics": {"enabled": false}, "width": "100%"};
+        var nodes = [{"color": {"background": "#842899", "border": "#9e42b3", "highlight": {"background": "#933da6", "border": "#9e42b3"}}, "fullLabel": "0 PUSH1 0x80\n2 PUSH1 0x40\n4 MSTORE\n5 PUSH1 0x0a\n7 PUSH1 0x00\n9 SSTORE\n10 PUSH1 0x64\n12 PUSH1 0x01\n14 SSTORE\n15 CALLVALUE\n16 DUP1\n17 ISZERO\n18 PUSH1 0x19\n20 JUMPI", "id": "0", "isExpanded": false, "label": "0 PUSH1 0x80\n2 PUSH1 0x40\n4 MSTORE\n5 PUSH1 0x0a\n7 PUSH1 0x00\n9 SSTORE\n(click to expand +)", "size": 150, "truncLabel": "0 PUSH1 0x80\n2 PUSH1 0x40\n4 MSTORE\n5 PUSH1 0x0a\n7 PUSH1 0x00\n9 SSTORE\n(click to expand +)"}, {"color": {"background": "#842899", "border": "#9e42b3", "highlight": {"background": "#933da6", "border": "#9e42b3"}}, "fullLabel": "25 JUMPDEST\n26 POP\n27 PUSH1 0x4d\n29 DUP1\n30 PUSH1 0x27\n32 PUSH1 0x00\n34 CODECOPY\n35 PUSH1 0x00\n37 RETURN", "id": "1", "isExpanded": false, "label": "25 JUMPDEST\n26 POP\n27 PUSH1 0x4d\n29 DUP1\n30 PUSH1 0x27\n32 PUSH1 0x00\n(click to expand +)", "size": 150, "truncLabel": "25 JUMPDEST\n26 POP\n27 PUSH1 0x4d\n29 DUP1\n30 PUSH1 0x27\n32 PUSH1 0x00\n(click to expand +)"}, {"color": {"background": "#842899", "border": "#9e42b3", "highlight": {"background": "#933da6", "border": "#9e42b3"}}, "fullLabel": "21 PUSH1 0x00\n23 DUP1\n24 REVERT", "id": "2", "isExpanded": false, "label": "21 PUSH1 0x00\n23 DUP1\n24 REVERT", "size": 150, "truncLabel": "21 PUSH1 0x00\n23 DUP1\n24 REVERT"}, {"color": {"background": "#842899", "border": "#9e42b3", "highlight": {"background": "#933da6", "border": "#9e42b3"}}, "fullLabel": "0 PUSH1 0x80\n2 PUSH1 0x40\n4 MSTORE\n5 PUSH1 0x14\n7 PUSH1 0x00\n9 DUP2\n10 SWAP1\n11 SSTORE\n12 POP\n13 PUSH1 0x14\n15 PUSH1 0x00\n17 SLOAD\n18 EQ\n19 ISZERO\n20 PUSH1 0x1f\n22 JUMPI", "id": "3", "isExpanded": false, "label": "0 PUSH1 0x80\n2 PUSH1 0x40\n4 MSTORE\n5 PUSH1 0x14\n7 PUSH1 0x00\n9 DUP2\n(click to expand +)", "size": 150, "truncLabel": "0 PUSH1 0x80\n2 PUSH1 0x40\n4 MSTORE\n5 PUSH1 0x14\n7 PUSH1 0x00\n9 DUP2\n(click to expand +)"}, {"color": {"background": "#842899", "border": "#9e42b3", "highlight": {"background": "#933da6", "border": "#9e42b3"}}, "fullLabel": "23 PUSH1 0x1e\n25 PUSH1 0x00\n27 DUP2\n28 SWAP1\n29 SSTORE\n30 POP\n31 JUMPDEST\n32 STOP", "id": "4", "isExpanded": false, "label": "23 PUSH1 0x1e\n25 PUSH1 0x00\n27 DUP2\n28 SWAP1\n29 SSTORE\n30 POP\n(click to expand +)", "size": 150, "truncLabel": "23 PUSH1 0x1e\n25 PUSH1 0x00\n27 DUP2\n28 SWAP1\n29 SSTORE\n30 POP\n(click to expand +)"}, {"color": {"background": "#842899", "border": "#9e42b3", "highlight": {"background": "#933da6", "border": "#9e42b3"}}, "fullLabel": "0 PUSH1 0x80\n2 PUSH1 0x40\n4 MSTORE\n5 PUSH1 0x14\n7 PUSH1 0x00\n9 DUP2\n10 SWAP1\n11 SSTORE\n12 POP\n13 PUSH1 0x14\n15 PUSH1 0x00\n17 SLOAD\n18 EQ\n19 ISZERO\n20 PUSH1 0x1f\n22 JUMPI", "id": "5", "isExpanded": false, "label": "0 PUSH1 0x80\n2 PUSH1 0x40\n4 MSTORE\n5 PUSH1 0x14\n7 PUSH1 0x00\n9 DUP2\n(click to expand +)", "size": 150, "truncLabel": "0 PUSH1 0x80\n2 PUSH1 0x40\n4 MSTORE\n5 PUSH1 0x14\n7 PUSH1 0x00\n9 DUP2\n(click to expand +)"}, {"color": {"background": "#842899", "border": "#9e42b3", "highlight": {"background": "#933da6", "border": "#9e42b3"}}, "fullLabel": "23 PUSH1 0x1e\n25 PUSH1 0x00\n27 DUP2\n28 SWAP1\n29 SSTORE\n30 POP\n31 JUMPDEST\n32 STOP", "id": "6", "isExpanded": false, "label": "23 PUSH1 0x1e\n25 PUSH1 0x00\n27 DUP2\n28 SWAP1\n29 SSTORE\n30 POP\n(click to expand +)", "size": 150, "truncLabel": "23 PUSH1 0x1e\n25 PUSH1 0x00\n27 DUP2\n28 SWAP1\n29 SSTORE\n30 POP\n(click to expand +)"}];
+        var edges = [{"arrows": "to", "from": "0", "label": "call_value1 == 0", "smooth": {"type": "cubicBezier"}, "to": "1"}, {"arrows": "to", "from": "0", "label": "Not(call_value1 == 0)", "smooth": {"type": "cubicBezier"}, "to": "2"}, {"arrows": "to", "from": "1", "label": "", "smooth": {"type": "cubicBezier"}, "to": "3"}, {"arrows": "to", "from": "3", "label": "True", "smooth": {"type": "cubicBezier"}, "to": "4"}, {"arrows": "to", "from": "4", "label": "", "smooth": {"type": "cubicBezier"}, "to": "5"}, {"arrows": "to", "from": "5", "label": "True", "smooth": {"type": "cubicBezier"}, "to": "6"}];
+    </script>
+</head>
+<body>
+<p>Mythril / Ethereum LASER Symbolic VM</p>
+<div id="mynetwork"></div>
+<script type="text/javascript">
+    var container = document.getElementById('mynetwork');
+
+    var nodesSet = new vis.DataSet(nodes);
+    var edgesSet = new vis.DataSet(edges);
+    var data = {'nodes': nodesSet, 'edges': edgesSet}
+
+    var gph = new vis.Network(container, data, options);
+    gph.on("click", function (params) {
+        // parse node id
+        var nodeID = params['nodes']['0'];
+        if (nodeID) {
+            var clickedNode = nodesSet.get(nodeID);
+
+            if(clickedNode.isExpanded) {
+                clickedNode.label = clickedNode.truncLabel;
+            }
+            else {
+                clickedNode.label = clickedNode.fullLabel;
+            }
+
+            clickedNode.isExpanded = !clickedNode.isExpanded;
+
+            nodesSet.update(clickedNode);
+        }
+    });
+</script>
+</body>
+</html>
