@@ -1181,6 +1181,10 @@ class Instruction:
             if next_explores is None:
                 return
 
+            # for all the tuple in the current priority level
+            # check if the current function signature is in the current priority list
+            # if it is return both branches
+            # then remove the tuple from the priority list
             for obj in next_explores:
                 hash = int(obj.second.function_hash,16)
                 func = obj.first.function_name
@@ -1196,7 +1200,10 @@ class Instruction:
                     return states
 
             false_state = self._false_branch(condition, global_state)
+
             # check following priority, and append them to lower order work list accordingly
+            # this is because a decision point can be a start point in the lower priority order
+            # in this case, return false branch to current work list. return true branch to lower prepare list
             glb_func_called = global_state.last_function_called
             if glb_func_called is not None:
                 for key, value in self.priority.items():
@@ -1213,6 +1220,8 @@ class Instruction:
                             elif key == 'RAR':
                                 self.laser_obj.forth_work_list.append(true_state1)
 
+                            # true branch will be removed from the work list.
+                            # TODO: Refactor this part
                             states.append(false_state)
                             states.append(true_state1)
                             heuristic_branching = False
@@ -1225,6 +1234,7 @@ class Instruction:
             del global_state
             return states
 
+        # this is the normal case
         else:
             # True case
             # Get jump destination
