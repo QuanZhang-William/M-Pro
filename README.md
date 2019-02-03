@@ -7,7 +7,13 @@ Mythril Pro is developed based on original Mythril-Classic symbolic engine, util
 
 See the [Wiki](https://github.com/ConsenSys/mythril/wiki/Installation-and-Setup) to install required dependencies. 
 
-Mythril Pro also requires a slightly modified version of Slither to analyze state variable dependency. 
+Note: don't run 'pip3 install mythril' in this step, as this command installs the original Mythril-Classic.
+
+```bash
+$ pip3 install mythril 
+```
+
+Mythril Pro also requires a slightly modified version of Slither to analyze state variable dependencies. 
 
 ### Using Git
 
@@ -27,18 +33,29 @@ $ pip3 install .
 
 ## Mythril Pro additional usage
 
+Mythril Pro supports all functionalities and configuration flags of Mythril-Classic, with the following additional features:
+
 To analyze a smart contract with branching heuristic enabled:
 
 ```bash
-$ myth -w <file name>
+$ myth -w <smart contract file>
+```
+
+Example: 
+```bash
+$ myth -w solidity_examples/calls.sol
 ```
 
 To generate CFG with with branching heuristic enabled:
 
 ```bash
-$ myth --sgraph <output file > <smart contract file>
+$ myth --sgraph <output file> <smart contract file>
 ```
 
+Example: 
+```bash
+$ myth --sgraph output.html solidity_examples/calls.sol
+```
 
 
 # Mythril Classic
