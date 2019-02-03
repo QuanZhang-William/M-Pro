@@ -56,6 +56,14 @@ class MappingObjTuple:
         self.first = first
         self.second = second
 
+    def __eq__(self, other):
+        return self.first == other.first \
+               and self.second == other.second
+
+    def __hash__(self):
+        return hash(('first', self.first,
+                     'second', self.second))
+
 
 class Mythril(object):
     """
@@ -640,33 +648,49 @@ class Mythril(object):
         waw = []
         rar = []
 
+        visited = set()
+
         for wt_key, wt_value in writing_obj_list.items():
             if wt_key in reading_obj_list:
                 for temp in writing_obj_list[wt_key]:
                     for rd_value in reading_obj_list[wt_key]:
-                        raw.append(MappingObjTuple(temp, rd_value))
+                        mapping = MappingObjTuple(temp, rd_value)
+                        if mapping not in visited:
+                            raw.append(mapping)
+                            visited.add(mapping)
         priority['RAW'] = raw
 
         for rd_key, rd_value in reading_obj_list.items():
             if rd_key in writing_obj_list:
                 for rd_value in reading_obj_list[rd_key]:
                     for temp in writing_obj_list[rd_key]:
-                        war.append(MappingObjTuple(rd_value, temp))
+                        mapping = MappingObjTuple(rd_value, temp)
+                        if mapping not in visited:
+                            war.append(mapping)
+                            visited.add(mapping)
         priority['WAR'] = war
-
-        for rd_key, rd_value in reading_obj_list.items():
-            for read1 in reading_obj_list[rd_key]:
-                for read2 in reading_obj_list[rd_key]:
-                    if read1 != read2:
-                        rar.append(MappingObjTuple(read1, read2))
-        priority['RAR'] = rar
 
         for wt_key, wt_value in writing_obj_list.items():
             for write1 in writing_obj_list[wt_key]:
                 for write2 in writing_obj_list[wt_key]:
                     if write1 != write2:
-                        waw.append(MappingObjTuple(write1, write2))
+                        mapping = MappingObjTuple(write1, write2)
+                        if mapping not in visited:
+                            waw.append(MappingObjTuple(write1, write2))
+                            visited.add(mapping)
         priority['WAW'] = waw
+
+        for rd_key, rd_value in reading_obj_list.items():
+            for read1 in reading_obj_list[rd_key]:
+                for read2 in reading_obj_list[rd_key]:
+                    if read1 != read2:
+                        mapping = MappingObjTuple(read1, read2)
+                        if mapping not in visited:
+                            rar.append(MappingObjTuple(read1, read2))
+                            visited.add(mapping)
+        priority['RAR'] = rar
+
+
 
         return priority
 
