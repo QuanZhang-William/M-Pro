@@ -1193,7 +1193,7 @@ class Instruction:
                     false_state = self._false_branch(condition, global_state)
                     states.append(false_state)
                     states.append(true_state)
-                    self.priority[self.title].remove(obj)
+                    #self.priority[self.title].remove(obj)
 
                     heuristic_branching = False
                     del global_state
