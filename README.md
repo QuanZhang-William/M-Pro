@@ -7,7 +7,7 @@ Mythril Pro is developed based on original Mythril-Classic symbolic engine, util
 
 See the [Wiki](https://github.com/ConsenSys/mythril/wiki/Installation-and-Setup) to install required dependencies. 
 
-Note: don't run 'pip3 install mythril' in this step, as this command installs the original Mythril-Classic.
+Note: do not run 'pip3 install mythril' in this step, as this command installs the original Mythril-Classic.
 
 ```bash
 $ pip3 install mythril 
@@ -20,14 +20,14 @@ Mythril Pro also requires a slightly modified version of Slither to analyze stat
 To install the modified version of Slither:
 
 ```bash
-$ git clone https://github.com/QuanZhang-William/slither.git
+$ git clone https://github.com/QuanZhang-William/slither.git && cd slither
 $ pip3 install . 
 ```
 
 To install Mythril Pro:
 
 ```bash
-$ git clone https://github.com/QuanZhang-William/mythril-classic.git
+$ git clone https://github.com/QuanZhang-William/mythril-classic.git && cd mythril-classic
 $ pip3 install . 
 ```
 
