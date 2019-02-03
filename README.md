@@ -1,3 +1,30 @@
+# Mythril Pro
+Mythril Pro is developed based on original Mythril-Classic symbolic engine, utilizing storage dependency analysis to prune uncessary search space. Mythril Pro is significantly more efficient and scalable, while producing exactly the same result as Mythril-Classic.
+
+## Installation and setup
+
+### Prerequisite
+
+See the [Wiki](https://github.com/ConsenSys/mythril/wiki/Installation-and-Setup) to install required dependencies. 
+
+Mythril Pro requires a slightly modified version of Slither to analyze state variable dependecy. To install the modified version of Slither:
+
+### Using Git
+
+```bash
+$ git clone https://github.com/QuanZhang-William/slither.git && cd slither
+$ pip3 install . 
+```
+
+To install Mythril Pro:
+
+```bash
+$ git clone https://github.com/QuanZhang-William/mythril-classic.git
+$ pip3 install . 
+```
+
+
+
 # Mythril Classic
 
 <p align="center">
