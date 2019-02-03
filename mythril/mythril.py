@@ -572,14 +572,21 @@ class Mythril(object):
     def parse_slither(contract=None, file=None):
         if file is None:
             print('file is not specified for slither')
-            return
+            return None
 
         if contract.name is None:
             print('contract cannot be none for slither')
-            return
+            return None
 
-        slither_obj = slither.Slither(file)
-        slither_contract = slither_obj.get_contract_from_name(contract.name)
+        slither_contract = []
+
+        try:
+            slither_obj = slither.Slither(file)
+            slither_contract = slither_obj.get_contract_from_name(contract.name)
+        except:
+            print("Slither error, cannot analyze dependency")
+            return None
+
 
         functions_writing_a = {}
         functions_reading_a = {}
