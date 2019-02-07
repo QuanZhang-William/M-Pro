@@ -44,7 +44,7 @@ class GlobalState:
         self.transaction_stack = transaction_stack if transaction_stack else []
         self.op_code = ""
         self.last_return_data = last_return_data
-        self.annotations = annotations or []
+        self._annotations = annotations or []
         self.last_function_called = last_function_called
 
     def __copy__(self) -> "GlobalState":
