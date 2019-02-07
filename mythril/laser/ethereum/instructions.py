@@ -1301,8 +1301,6 @@ class Instruction:
 
             return self._sload_helper(global_state, str(index))
 
-        return global_state_copy
-
     @staticmethod
     def _sload_helper(
         global_state: GlobalState, index: Union[int, Expression], constraints=None
