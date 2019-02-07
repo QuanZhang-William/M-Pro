@@ -38,6 +38,7 @@ class SymExecWrapper:
         modules=(),
         compulsory_statespace=True,
         enable_iprof=False,
+        priority = None
     ):
         """
 
@@ -99,14 +100,14 @@ class SymExecWrapper:
 
         if isinstance(contract, SolidityContract):
             self.laser.sym_exec(
-                creation_code=contract.creation_code, contract_name=contract.name
+                creation_code=contract.creation_code, contract_name=contract.name, priority=priority
             )
         elif isinstance(contract, EVMContract) and contract.creation_code:
             self.laser.sym_exec(
-                creation_code=contract.creation_code, contract_name=contract.name
+                creation_code=contract.creation_code, contract_name=contract.name, priority=priority
             )
         else:
-            self.laser.sym_exec(address)
+            self.laser.sym_exec(address, priority=priority)
 
         if not requires_statespace:
             return
@@ -114,6 +115,7 @@ class SymExecWrapper:
         self.nodes = self.laser.nodes
         self.edges = self.laser.edges
 
+        print('total states: ' + str(self.laser.total_states))
         # Generate lists of interesting operations
 
         self.calls = []

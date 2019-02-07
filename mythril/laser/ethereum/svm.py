@@ -1,12 +1,14 @@
 """This module implements the main symbolic execution engine."""
 import logging
 from collections import defaultdict
+
 from copy import copy
 from datetime import datetime, timedelta
 from functools import reduce
 from typing import Callable, Dict, List, Tuple, Union
 
 from mythril.laser.ethereum.cfg import NodeFlags, Node, Edge, JumpType
+
 from mythril.laser.ethereum.evm_exceptions import StackUnderflowException
 from mythril.laser.ethereum.evm_exceptions import VmException
 from mythril.laser.ethereum.instructions import Instruction
@@ -22,8 +24,12 @@ from mythril.laser.ethereum.transaction import (
     TransactionStartSignal,
     execute_contract_creation,
     execute_message_call,
+    heuristic_message_call
 )
+
 from mythril.laser.ethereum.iprof import InstructionProfiler
+from mythril.laser.ethereum.instructions import fallback_pointer
+
 
 log = logging.getLogger(__name__)
 
@@ -73,6 +79,8 @@ class LaserEVM:
         self.world_state = world_state
         self.open_states = [world_state]
 
+        self.heuristic_branching = False
+
         self.coverage = {}
 
         self.total_states = 0
@@ -99,6 +107,19 @@ class LaserEVM:
         self.iprof = InstructionProfiler() if enable_iprof else None
 
         log.info("LASER EVM initialized with dynamic loader: " + str(dynamic_loader))
+        self.first_order_work_list = ['RAW']
+        self.second_order_work_list = ['WAR']
+        self.third_order_work_list = ['WAW']
+        self.forth_order_work_list = ['RAR']
+        self.ranking = []
+
+        self.bad_bit = False
+
+        self.first_work_list = []
+        self.second_work_list = []
+        self.third_work_list = []
+        self.forth_work_list = []
+
 
     @property
     def accounts(self) -> Dict[str, Account]:
@@ -109,7 +130,11 @@ class LaserEVM:
         return self.world_state.accounts
 
     def sym_exec(
-        self, main_address=None, creation_code=None, contract_name=None
+        self,
+        main_address=None,
+        creation_code=None,
+        contract_name=None,
+        priority=None
     ) -> None:
         """
 
@@ -125,6 +150,7 @@ class LaserEVM:
         if main_address:
             log.info("Starting message call transaction to {}".format(main_address))
             self._execute_transactions(main_address)
+
 
         elif creation_code:
             log.info("Starting contract creation transaction")
@@ -142,7 +168,7 @@ class LaserEVM:
                     "Increase the resources for creation execution (--max-depth or --create-timeout)"
                 )
 
-            self._execute_transactions(created_account.address)
+            self._execute_transactions(created_account.address, priority)
 
         log.info("Finished symbolic execution")
         if self.requires_statespace:
@@ -163,11 +189,12 @@ class LaserEVM:
         if self.iprof is not None:
             log.info("Instruction Statistics:\n{}".format(self.iprof))
 
-    def _execute_transactions(self, address):
-        """This function executes multiple transactions on the address based on
-        the coverage.
 
+    def _execute_transactions(self, address, priority=None):
+        """
+        This function executes multiple transactions on the address based on the coverage
         :param address: Address of the contract
+        :param priority:
         :return:
         """
         self.coverage = {}
@@ -181,7 +208,10 @@ class LaserEVM:
                 )
             )
 
-            execute_message_call(self, address)
+            if priority is None:
+                execute_message_call(self, address, priority)
+            else:
+                heuristic_message_call(self, address, priority)
 
             end_coverage = self._get_covered_instructions()
 
@@ -203,7 +233,7 @@ class LaserEVM:
             )
         return total_covered_instructions
 
-    def exec(self, create=False, track_gas=False) -> Union[List[GlobalState], None]:
+    def exec(self, create=False, track_gas=False, priority=None, title=None, laser_obj=None) -> Union[List[GlobalState], None]:
         """
 
         :param create:
@@ -228,17 +258,24 @@ class LaserEVM:
             ):
                 return final_states + [global_state] if track_gas else None
 
+
             try:
-                new_states, op_code = self.execute_state(global_state)
+                new_states, op_code = self.execute_state(global_state, priority, title, laser_obj=laser_obj)
             except NotImplementedError:
                 log.debug("Encountered unimplemented instruction")
                 continue
             self.manage_cfg(op_code, new_states)
 
+            # when end of transac is raised, new states are added to self.open_states, but not in the work_list
+            if self.bad_bit:
+                new_states.pop()
+                self.bad_bit = False
+
             if new_states:
                 self.work_list += new_states
             elif track_gas:
                 final_states.append(global_state)
+
             self.total_states += len(new_states)
         return final_states if track_gas else None
 
@@ -253,7 +290,7 @@ class LaserEVM:
         self.open_states.append(global_state.world_state)
 
     def execute_state(
-        self, global_state: GlobalState
+        self, global_state: GlobalState, priority=None, title=None, laser_obj=None
     ) -> Tuple[List[GlobalState], Union[str, None]]:
         """
 
@@ -271,9 +308,10 @@ class LaserEVM:
         self._execute_pre_hook(op_code, global_state)
         try:
             self._measure_coverage(global_state)
-            new_global_states = Instruction(
-                op_code, self.dynamic_loader, self.iprof
-            ).evaluate(global_state)
+            new_global_states = Instruction(op_code, self.dynamic_loader, self.iprof, priority, title, laser_obj).evaluate(
+                global_state
+            )
+
 
         except VmException as e:
             transaction, return_global_state = global_state.transaction_stack.pop()
@@ -312,6 +350,7 @@ class LaserEVM:
             ]
 
             if return_global_state is None:
+                # suicide return data will be None
                 if (
                     not isinstance(transaction, ContractCreationTransaction)
                     or transaction.return_data
@@ -467,6 +506,7 @@ class LaserEVM:
 
         environment = state.environment
         disassembly = environment.code
+
         if address in disassembly.address_to_function_name:
             # Enter a new function
             environment.active_function_name = disassembly.address_to_function_name[
@@ -480,7 +520,7 @@ class LaserEVM:
                 + ":"
                 + new_node.function_name
             )
-        elif address == 0:
+        elif address == 0 or address == fallback_pointer:
             environment.active_function_name = "fallback"
 
         new_node.function_name = environment.active_function_name

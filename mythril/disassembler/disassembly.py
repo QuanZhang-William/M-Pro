@@ -4,6 +4,17 @@ from mythril.disassembler import asm
 from mythril.support.signatures import SignatureDB
 
 
+class MappingObj:
+    function_name = ''
+    function_hash= ''
+    entry_point = ''
+
+    def __init__(self, name, hash, entry):
+        self.function_name = name
+        self.function_hash = hash
+        self.entry_point = entry
+
+
 class Disassembly(object):
     """Disassembly class.
 
@@ -26,6 +37,8 @@ class Disassembly(object):
         self.func_hashes = []
         self.function_name_to_address = {}
         self.address_to_function_name = {}
+        self.slither_mappings_list = []
+        self.slither_mappings_dict = {}
 
         # open from default locations
         # control if you want to have online signature hash lookups
@@ -41,6 +54,9 @@ class Disassembly(object):
                 index, self.instruction_list, signatures
             )
             self.func_hashes.append(function_hash)
+            temp = MappingObj(function_name, function_hash, jump_target)
+            self.slither_mappings_list.append(temp)
+            self.slither_mappings_dict[function_name] = temp
 
             if jump_target is not None and function_name is not None:
                 self.function_name_to_address[function_name] = jump_target

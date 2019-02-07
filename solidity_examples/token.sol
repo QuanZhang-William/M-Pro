@@ -1,5 +1,3 @@
-
-
 contract Token {
 
   mapping(address => uint) balances;

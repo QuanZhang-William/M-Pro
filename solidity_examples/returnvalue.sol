@@ -1,4 +1,4 @@
-pragma solidity 0.5.0;
+pragma solidity ^0.5.0;
 
 
 contract ReturnValue {
@@ -8,6 +8,7 @@ contract ReturnValue {
   function callnotchecked() public {
     callee.call("");
   }
+
 
   function callchecked() public {
     (bool success, bytes memory data) = callee.call("");

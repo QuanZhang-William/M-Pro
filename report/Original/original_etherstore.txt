@@ -1,0 +1,103 @@
+==== Integer Overflow ====
+SWC ID: 101
+Type: Warning
+Contract: EtherStore
+Function name: withdrawFunds(uint256)
+PC address: 574
+This binary add operation can result in integer overflow.
+
+--------------------
+In file: solidity_examples/etherstore.sol:16
+
+lastWithdrawTime[msg.sender] + 1 weeks
+
+--------------------
+
+==== Dependence on predictable environment variable ====
+SWC ID: 116
+Type: Warning
+Contract: EtherStore
+Function name: withdrawFunds(uint256)
+PC address: 628
+In the function `withdrawFunds(uint256)` the following predictable state variables are used to determine Ether recipient:
+- block.timestamp
+
+--------------------
+In file: solidity_examples/etherstore.sol:17
+
+msg.sender.call.value(_weiToWithdraw)()
+
+--------------------
+
+==== Ether thief ====
+SWC ID: 105
+Type: Warning
+Contract: EtherStore
+Function name: withdrawFunds(uint256)
+PC address: 628
+Users other than the contract creator can withdraw ETH from the contract account without previously having sent any ETH to it. This is likely to be vulnerability.
+--------------------
+In file: solidity_examples/etherstore.sol:17
+
+msg.sender.call.value(_weiToWithdraw)()
+
+--------------------
+
+==== Message call to external contract ====
+SWC ID: 107
+Type: Warning
+Contract: EtherStore
+Function name: withdrawFunds(uint256)
+PC address: 628
+This contract executes a message call to the address of the transaction sender. Generally, it is not recommended to call user-supplied addresses using Solidity's call() construct. Note that attackers might leverage reentrancy attacks to exploit race conditions or manipulate this contract's state.
+--------------------
+In file: solidity_examples/etherstore.sol:17
+
+msg.sender.call.value(_weiToWithdraw)()
+
+--------------------
+
+==== State change after external call ====
+SWC ID: 107
+Type: Warning
+Contract: EtherStore
+Function name: withdrawFunds(uint256)
+PC address: 719
+The contract account state is changed after an external call. Consider that the called contract could re-enter the function before this state change takes place. This can lead to business logic vulnerabilities.
+--------------------
+In file: solidity_examples/etherstore.sol:18
+
+balances[msg.sender] -= _weiToWithdraw
+
+--------------------
+
+==== State change after external call ====
+SWC ID: 107
+Type: Warning
+Contract: EtherStore
+Function name: withdrawFunds(uint256)
+PC address: 787
+The contract account state is changed after an external call. Consider that the called contract could re-enter the function before this state change takes place. This can lead to business logic vulnerabilities.
+--------------------
+In file: solidity_examples/etherstore.sol:19
+
+lastWithdrawTime[msg.sender] = now
+
+--------------------
+
+==== Integer Overflow ====
+SWC ID: 101
+Type: Warning
+Contract: EtherStore
+Function name: depositFunds()
+PC address: 891
+This binary add operation can result in integer overflow.
+
+--------------------
+In file: solidity_examples/etherstore.sol:8
+
+balances[msg.sender] += msg.value
+
+--------------------
+
+43s

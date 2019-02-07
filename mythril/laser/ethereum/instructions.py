@@ -86,6 +86,7 @@ class StateTransition(object):
         :return:
         """
         global_state_copy = copy(state)
+        global_state_copy.last_function_called = state.last_function_called
         return func(func_obj, global_state_copy)
 
     def increment_states_pc(self, states: List[GlobalState]) -> List[GlobalState]:
@@ -151,20 +152,22 @@ class StateTransition(object):
         return wrapper
 
 
+heuristic_branching = False
+set_fallback_func = True
+fallback_pointer = 0
+
+
 class Instruction:
     """Instruction class is used to mutate a state according to the current
     instruction."""
-
-    def __init__(self, op_code: str, dynamic_loader: DynLoader, iprof=None):
-        """
-
-        :param op_code:
-        :param dynamic_loader:
-        :param iprof:
-        """
+    def __init__(self, op_code: str, dynamic_loader: DynLoader, iprof=None, priority=None, title=None, laser_obj=None):
         self.dynamic_loader = dynamic_loader
         self.op_code = op_code.upper()
+        self.priority = priority
+        self.title = title
+        self.laser_obj = laser_obj
         self.iprof = iprof
+
 
     def evaluate(self, global_state: GlobalState, post=False) -> List[GlobalState]:
         """Performs the mutation for this instruction.
@@ -211,6 +214,7 @@ class Instruction:
         :param global_state:
         :return:
         """
+
         return [global_state]
 
     @StateTransition()
@@ -229,9 +233,21 @@ class Instruction:
             raise VmException("Invalid Push instruction")
 
         push_value += "0" * max(length_of_value - len(push_value), 0)
+
         global_state.mstate.stack.append(
             symbol_factory.BitVecVal(int(push_value, 16), 256)
         )
+
+        disassembly = global_state.environment.code.func_hashes
+        push_value_str = '0x' + str(push_value)
+
+        # starting from second msg.transaction, enable heuristic search
+        if len(global_state.world_state.transaction_sequence) > 2 and self.priority is not None and str(push_instruction['opcode']) == 'PUSH4':
+            if push_value_str in disassembly:
+                global heuristic_branching
+                heuristic_branching = True
+                return [global_state]
+
         return [global_state]
 
     @StateTransition()
@@ -1278,12 +1294,14 @@ class Instruction:
 
             for (keccak_key, constraint) in constraints:
                 results += self._sload_helper(
-                    copy(global_state), keccak_key, [constraint]
+                    self.copy_helper(global_state), keccak_key, [constraint]
                 )
             if len(results) > 0:
                 return results
 
             return self._sload_helper(global_state, str(index))
+
+        return global_state_copy
 
     @staticmethod
     def _sload_helper(
@@ -1360,14 +1378,14 @@ class Instruction:
                 )
                 if condition:
                     return self._sstore_helper(
-                        copy(global_state),
+                        self.copy_helper(global_state),
                         keccak_key,
                         value,
                         key_argument == index_argument,
                     )
 
                 results += self._sstore_helper(
-                    copy(global_state),
+                    self.copy_helper(global_state),
                     keccak_key,
                     value,
                     key_argument == index_argument,
@@ -1377,7 +1395,7 @@ class Instruction:
 
             if len(results) > 0:
                 results += self._sstore_helper(
-                    copy(global_state), str(index), value, new
+                    self.copy_helper(global_state), str(index), value, new
                 )
                 return results
 
@@ -1439,25 +1457,70 @@ class Instruction:
                 "Skipping JUMP to invalid destination (not JUMPDEST): " + str(jump_addr)
             )
 
-        new_state = copy(global_state)
+
+        new_state = self.copy_helper(global_state)
         # add JUMP gas cost
         min_gas, max_gas = OPCODE_GAS["JUMP"]
         new_state.mstate.min_gas_used += min_gas
         new_state.mstate.max_gas_used += max_gas
 
         # manually set PC to destination
+
         new_state.mstate.pc = index
         new_state.mstate.depth += 1
 
         return [new_state]
 
-    @StateTransition(increment_pc=False, enable_gas=False)
-    def jumpi_(self, global_state: GlobalState) -> List[GlobalState]:
-        """
+    def _true_branch(self, condition, global_state, jump_addr, disassembly):
+        # Get jump destination
+        min_gas, max_gas = OPCODE_GAS["JUMPI"]
+        index = util.get_instruction_index(disassembly.instruction_list, jump_addr)
+        if not index:
+            logging.debug("Invalid jump destination: " + str(jump_addr))
+            return
 
-        :param global_state:
-        :return:
-        """
+        instr = disassembly.instruction_list[index]
+        condi = simplify(condition) if isinstance(condition, Bool) else condition != 0
+        condi.simplify()
+        if instr["opcode"] == "JUMPDEST":
+            if (type(condi) == bool and condi) or (
+                    isinstance(condi, Bool) and not is_false(condi)
+            ):
+                new_state = self.copy_helper(global_state)
+                new_state.mstate.min_gas_used += min_gas
+                new_state.mstate.max_gas_used += max_gas
+
+                new_state.mstate.pc = index
+                new_state.mstate.depth += 1
+                new_state.mstate.constraints.append(condi)
+                return new_state
+            else:
+                logging.debug("Pruned unreachable states.")
+
+    def _false_branch(self, condition, global_state):
+        min_gas, max_gas = OPCODE_GAS["JUMPI"]
+        negated = (
+            simplify(Not(condition)) if isinstance(condition, Bool) else condition == 0
+        )
+        negated.simplify()
+        if (type(negated) == bool and negated) or (
+                isinstance(negated, Bool) and not is_false(negated)
+        ):
+            new_state = self.copy_helper(global_state)
+
+            new_state.mstate.min_gas_used += min_gas
+            new_state.mstate.max_gas_used += max_gas
+
+            new_state.mstate.depth += 1
+            new_state.mstate.pc += 1
+            new_state.mstate.constraints.append(negated)
+            # states.append(new_state)
+            return new_state
+        else:
+            log.debug("Pruned unreachable states.")
+
+    @StateTransition(increment_pc=False,  enable_gas=False)
+    def jumpi_(self, global_state: GlobalState) -> List[GlobalState]:
         state = global_state.mstate
         disassembly = global_state.environment.code
         min_gas, max_gas = OPCODE_GAS["JUMPI"]
@@ -1467,64 +1530,147 @@ class Instruction:
 
         try:
             jump_addr = util.get_concrete_int(op0)
+
+            # set fall back pointer to handle fallback function
+            global set_fallback_func
+            # if fall back func is not set yet
+            if set_fallback_func:
+                if 'Not(ULE(4,calldatasize))' in str(condition):
+                    global fallback_pointer
+                    fallback_pointer = jump_addr
+                    set_fallback_func = False
+
         except TypeError:
-            log.debug("Skipping JUMPI to invalid destination.")
+            logging.debug("Skipping JUMPI to invalid destination.")
             global_state.mstate.pc += 1
             global_state.mstate.min_gas_used += min_gas
             global_state.mstate.max_gas_used += max_gas
             return [global_state]
 
-        # False case
-        negated = (
-            simplify(Not(condition)) if isinstance(condition, Bool) else condition == 0
-        )
-        negated.simplify()
-        if (type(negated) == bool and negated) or (
-            isinstance(negated, Bool) and not is_false(negated)
-        ):
-            new_state = copy(global_state)
-            # add JUMPI gas cost
-            new_state.mstate.min_gas_used += min_gas
-            new_state.mstate.max_gas_used += max_gas
+        global heuristic_branching
 
-            # manually increment PC
-            new_state.mstate.depth += 1
-            new_state.mstate.pc += 1
-            new_state.mstate.constraints.append(negated)
-            states.append(new_state)
-        else:
-            log.debug("Pruned unreachable states.")
+        # normal case or heuristic branching case
+        # if it is the second msg call transcation,
+        # heuristic branching enabled by push4,
+        # and ranking is not done
+        if self.priority is not None and len(
+            global_state.world_state.transaction_sequence) > 2 and heuristic_branching and \
+                self.title is not None:
+            next_explores = self.priority[self.title]
 
-        # True case
+            #TODO: Some testing required
+            if next_explores is None:
+                return
 
-        # Get jump destination
-        index = util.get_instruction_index(disassembly.instruction_list, jump_addr)
-        if not index:
-            log.debug("Invalid jump destination: " + str(jump_addr))
+            # for all the tuple in the current priority level
+            # check if the current function signature is in the current priority list
+            # if it is return both branches
+            # then remove the tuple from the priority list
+            for obj in next_explores:
+                hash = int(obj.second.function_hash,16)
+                func = obj.first.function_name
+                if func == global_state.last_function_called and str(hash) in str(condition):
+                    true_state = self._true_branch(condition, global_state, jump_addr, disassembly)
+                    false_state = self._false_branch(condition, global_state)
+                    states.append(false_state)
+                    states.append(true_state)
+                    #self.priority[self.title].remove(obj)
+
+                    heuristic_branching = False
+                    del global_state
+                    return states
+
+            false_state = self._false_branch(condition, global_state)
+
+            # check following priority, and append them to lower order work list accordingly
+            # this is because a decision point can be a start point in the lower priority order
+            # in this case, return false branch to current work list. return true branch to lower prepare list
+            glb_func_called = global_state.last_function_called
+            if glb_func_called is not None:
+                for key, value in self.priority.items():
+                    for obj1 in value:
+                        second_func_hash = int(obj1.second.function_hash, 16)
+                        if glb_func_called == obj1.first.function_name and str(second_func_hash) in str(condition):
+                            true_state1 = self._true_branch(condition, global_state, jump_addr, disassembly)
+                            if key == 'RAW':
+                                self.laser_obj.first_work_list.append(true_state1)
+                            elif key == 'WAR':
+                                self.laser_obj.second_work_list.append(true_state1)
+                            elif key == 'WAW':
+                                self.laser_obj.third_work_list.append(true_state1)
+                            elif key == 'RAR':
+                                self.laser_obj.forth_work_list.append(true_state1)
+
+                            # true branch will be removed from the work list.
+                            # TODO: Refactor this part
+                            states.append(false_state)
+                            states.append(true_state1)
+                            heuristic_branching = False
+                            self.laser_obj.bad_bit = True
+                            del global_state
+                            return states
+
+            states.append(false_state)
+            heuristic_branching = False
+            del global_state
             return states
 
-        instr = disassembly.instruction_list[index]
+        # this is the normal case
+        else:
+            # True case
+            # Get jump destination
+            index = util.get_instruction_index(disassembly.instruction_list, jump_addr)
+            if not index:
+                logging.debug("Invalid jump destination: " + str(jump_addr))
+                return states
 
-        condi = simplify(condition) if isinstance(condition, Bool) else condition != 0
-        condi.simplify()
-        if instr["opcode"] == "JUMPDEST":
-            if (type(condi) == bool and condi) or (
-                isinstance(condi, Bool) and not is_false(condi)
+            instr = disassembly.instruction_list[index]
+
+            condi = simplify(condition) if isinstance(condition, Bool) else condition != 0
+            condi.simplify()
+            if instr["opcode"] == "JUMPDEST":
+                if (type(condi) == bool and condi) or (
+                    isinstance(condi, Bool) and not is_false(condi)
+                ):
+
+                    new_state = self.copy_helper(global_state)
+                    # add JUMPI gas cost
+                    new_state.mstate.min_gas_used += min_gas
+                    new_state.mstate.max_gas_used += max_gas
+
+                    new_state.mstate.pc = index
+                    new_state.mstate.depth += 1
+                    new_state.mstate.constraints.append(condi)
+                    states.append(new_state)
+                else:
+                    logging.debug("Pruned unreachable states.")
+
+            # False case
+            negated = (
+                simplify(Not(condition)) if isinstance(condition, Bool) else condition == 0
+            )
+            negated.simplify()
+            if (type(negated) == bool and negated) or (
+                isinstance(negated, Bool) and not is_false(negated)
             ):
-                new_state = copy(global_state)
+
+                new_state = self.copy_helper(global_state)
                 # add JUMPI gas cost
                 new_state.mstate.min_gas_used += min_gas
                 new_state.mstate.max_gas_used += max_gas
 
                 # manually set PC to destination
-                new_state.mstate.pc = index
+
                 new_state.mstate.depth += 1
-                new_state.mstate.constraints.append(condi)
+                new_state.mstate.pc += 1
+                new_state.mstate.constraints.append(negated)
                 states.append(new_state)
             else:
-                log.debug("Pruned unreachable states.")
-        del global_state
-        return states
+                logging.debug("Pruned unreachable states.")
+
+            del global_state
+            return states
+
 
     @StateTransition()
     def pc_(self, global_state: GlobalState) -> List[GlobalState]:
@@ -2038,3 +2184,11 @@ class Instruction:
             return native_result
 
         return [global_state]
+
+    @staticmethod
+    def copy_helper(state):
+        global_state_copy = copy(state)
+        global_state_copy.last_function_called = state.last_function_called
+
+        return global_state_copy
+

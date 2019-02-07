@@ -5,6 +5,7 @@
    http://www.github.com/b-mueller/mythril
 """
 
+
 import codecs
 import logging
 import os
@@ -14,6 +15,9 @@ import traceback
 from pathlib import Path
 from shutil import copyfile
 from configparser import ConfigParser
+
+from slither import slither
+from mythril.disassembler.disassembly import MappingObj
 
 import solc
 from ethereum import utils
@@ -37,6 +41,23 @@ from mythril.support.truffle import analyze_truffle_project
 from mythril.ethereum.interface.leveldb.client import EthLevelDB
 
 log = logging.getLogger(__name__)
+
+
+class MappingObjTuple:
+    first = None
+    second = None
+
+    def __init__(self, first, second):
+        self.first = first
+        self.second = second
+
+    def __eq__(self, other):
+        return self.first == other.first \
+               and self.second == other.second
+
+    def __hash__(self):
+        return hash(('first', self.first,
+                     'second', self.second))
 
 
 class Mythril(object):
@@ -535,9 +556,220 @@ class Mythril(object):
             max_depth=max_depth,
             execution_timeout=execution_timeout,
             create_timeout=create_timeout,
-            enable_iprof=enable_iprof,
+            enable_iprof=enable_iprof
         )
         return generate_graph(sym, physics=enable_physics, phrackify=phrackify)
+
+    def slither_graph_html(
+        self,
+        strategy,
+        contract,
+        address,
+        max_depth=None,
+        enable_physics=False,
+        phrackify=False,
+        execution_timeout=None,
+        create_timeout=None,
+        enable_iprof=False,
+        file=None
+    ):
+        priority = self.parse_slither(contract=contract, file=file[0])
+        sym = SymExecWrapper(
+            contract,
+            address,
+            strategy,
+            dynloader=DynLoader(
+                self.eth,
+                storage_loading=self.onchain_storage_access,
+                contract_loading=self.dynld,
+            ),
+            max_depth=max_depth,
+            execution_timeout=execution_timeout,
+            create_timeout=create_timeout,
+            enable_iprof=enable_iprof,
+            priority = priority
+        )
+        return generate_graph(sym, physics=enable_physics, phrackify=phrackify)
+
+    def slither_mythril(
+        self,
+        strategy,
+        address=None,
+        contracts=None,
+        max_depth=None,
+        execution_timeout=None,
+        create_timeout=None,
+        transaction_count=None,
+        modules=None,
+        verbose_report=False,
+        file=None,
+        enable_iprof=False):
+
+        all_issues = []
+        for contract in contracts or self.contracts:
+            priority = self.parse_slither(contract=contract, file=file[0])
+            try:
+                sym = SymExecWrapper(
+                contract,
+                address,
+                strategy,
+                dynloader=DynLoader(
+                    self.eth,
+                    storage_loading=self.onchain_storage_access,
+                    contract_loading=self.dynld,
+                ),
+                max_depth=max_depth,
+                execution_timeout=execution_timeout,
+                create_timeout=create_timeout,
+                priority=priority,
+                transaction_count=transaction_count,
+                modules=modules,
+                compulsory_statespace=False,
+                enable_iprof=enable_iprof,
+                )
+                issues = fire_lasers(sym, modules)
+
+            except KeyboardInterrupt:
+                log.critical("Keyboard Interrupt")
+                issues = retrieve_callback_issues(modules)
+            except Exception:
+                log.critical(
+                    "Exception occurred, aborting analysis. Please report this issue to the Mythril GitHub page.\n"
+                    + traceback.format_exc()
+                )
+                issues = retrieve_callback_issues(modules)
+
+            for issue in issues:
+                issue.add_code_info(contract)
+
+            all_issues += issues
+
+        source_data = Source()
+        source_data.get_source_from_contracts_list(self.contracts)
+        # Finally, output the results
+        report = Report(verbose_report, source_data)
+        for issue in all_issues:
+            report.append_issue(issue)
+
+        return report
+
+    @staticmethod
+    def parse_slither(contract=None, file=None):
+        if file is None:
+            print('file is not specified for slither')
+            return None
+
+        if contract.name is None:
+            print('contract cannot be none for slither')
+            return None
+
+        slither_contract = []
+
+        try:
+            slither_obj = slither.Slither(file)
+            slither_contract = slither_obj.get_contract_from_name(contract.name)
+        except:
+            print("Slither error, cannot analyze dependency")
+            return None
+
+
+        functions_writing_a = {}
+        functions_reading_a = {}
+
+        # Slither objects
+        variables = slither_contract.get_all_state_variables()
+        for variable in variables:
+            if variable not in functions_writing_a:
+                functions_writing_a[variable] = set()
+            for func in slither_contract.get_functions_writing_to_variable_including_internal_call(variable):
+                if func not in functions_writing_a[variable]:
+                    functions_writing_a[variable].add(func)
+
+            if variable not in functions_reading_a:
+                functions_reading_a[variable] = set()
+            for func in slither_contract.get_functions_reading_from_variable_including_internal_call(variable):
+                if func not in functions_reading_a[variable]:
+                    functions_reading_a[variable].add(func)
+
+        writing_obj_list = {}
+        reading_obj_list = {}
+
+        # Parse to Mythril object
+        for wt_key, wt_value in functions_writing_a.items():
+            if wt_key not in writing_obj_list:
+                writing_obj_list[wt_key] = set()
+            for item in wt_value:
+                if item.full_name in contract.disassembly.slither_mappings_dict:
+                    writing_obj_list[wt_key].add(contract.disassembly.slither_mappings_dict[item.full_name])
+
+                if item.full_name == "fallback()":
+                    temp = MappingObj('fallback', '0x0000000', 0)
+                    writing_obj_list[wt_key].add(temp)
+
+
+        for rd_key, rd_value in functions_reading_a.items():
+            if rd_key not in reading_obj_list:
+                reading_obj_list[rd_key] = set()
+            for item in rd_value:
+                if item.full_name in contract.disassembly.slither_mappings_dict:
+                    reading_obj_list[rd_key].add(contract.disassembly.slither_mappings_dict[item.full_name])
+
+                if item.full_name == "fallback()":
+                    temp = MappingObj('fallback', '0x0000000', 0)
+                    reading_obj_list[rd_key].add(temp)
+
+        priority = {}
+
+        raw = []
+        war = []
+        waw = []
+        rar = []
+
+        visited = set()
+
+        for wt_key, wt_value in writing_obj_list.items():
+            if wt_key in reading_obj_list:
+                for temp in writing_obj_list[wt_key]:
+                    for rd_value in reading_obj_list[wt_key]:
+                        mapping = MappingObjTuple(temp, rd_value)
+                        if mapping not in visited:
+                            raw.append(mapping)
+                            visited.add(mapping)
+        priority['RAW'] = raw
+
+        for rd_key, rd_value in reading_obj_list.items():
+            if rd_key in writing_obj_list:
+                for rd_value in reading_obj_list[rd_key]:
+                    for temp in writing_obj_list[rd_key]:
+                        mapping = MappingObjTuple(rd_value, temp)
+                        if mapping not in visited:
+                            war.append(mapping)
+                            visited.add(mapping)
+        priority['WAR'] = war
+
+        for wt_key, wt_value in writing_obj_list.items():
+            for write1 in writing_obj_list[wt_key]:
+                for write2 in writing_obj_list[wt_key]:
+                    if write1 != write2:
+                        mapping = MappingObjTuple(write1, write2)
+                        if mapping not in visited:
+                            waw.append(MappingObjTuple(write1, write2))
+                            visited.add(mapping)
+        priority['WAW'] = waw
+
+        for rd_key, rd_value in reading_obj_list.items():
+            for read1 in reading_obj_list[rd_key]:
+                for read2 in reading_obj_list[rd_key]:
+                    if read1 != read2:
+                        mapping = MappingObjTuple(read1, read2)
+                        if mapping not in visited:
+                            rar.append(MappingObjTuple(read1, read2))
+                            visited.add(mapping)
+        priority['RAR'] = rar
+
+
+
+        return priority
 
     def fire_lasers(
         self,

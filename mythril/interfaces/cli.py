@@ -12,6 +12,7 @@ import os
 import sys
 
 import coloredlogs
+import datetime
 
 import mythril.support.signatures as sigs
 from mythril.exceptions import AddressNotFoundError, CriticalError
@@ -58,6 +59,19 @@ def main():
         action="store_true",
         help="detect vulnerabilities, use with -c, -a or solidity file(s)",
     )
+
+    commands.add_argument(
+        "-w",
+        "--slither",
+        action="store_true",
+        help="combine slither and mythril",
+    )
+
+    commands.add_argument(
+        "--sgraph",
+        help="generate heuristic graph",
+    )
+
     commands.add_argument(
         "--truffle",
         action="store_true",
@@ -256,6 +270,8 @@ def main():
         or args.truffle
         or args.statespace_json
         or args.contract_hash_to_address
+        or args.slither
+        or args.sgraph
     ):
         parser.print_help()
         sys.exit()
@@ -398,6 +414,7 @@ def main():
             )
             print(storage)
 
+
         elif args.disassemble:
             # or mythril.disassemble(mythril.contracts[0])
 
@@ -406,13 +423,40 @@ def main():
             if mythril.contracts[0].creation_code:
                 print("Disassembly: \n" + mythril.contracts[0].get_creation_easm())
 
-        elif args.graph or args.fire_lasers:
+        elif args.slither:
+            start = datetime.datetime.now()
+            report = mythril.slither_mythril(
+                    strategy=args.strategy,
+                    address=address,
+                    modules=[m.strip() for m in args.modules.strip().split(",")]
+                    if args.modules
+                    else [],
+                    verbose_report=args.verbose_report,
+                    max_depth=args.max_depth,
+                    execution_timeout=args.execution_timeout,
+                    create_timeout=args.create_timeout,
+                    transaction_count=args.transaction_count,
+                    enable_iprof=args.enable_iprof,
+                    file=args.solidity_file)
+
+            outputs = {
+                "json": report.as_json(),
+                "text": report.as_text(),
+                "markdown": report.as_markdown(),
+            }
+            print(outputs[args.outform])
+
+            end = datetime.datetime.now()
+            print(end - start)
+
+        elif args.graph or args.fire_lasers or args.sgraph:
             if not mythril.contracts:
                 exit_with_error(
                     args.outform, "input files do not contain any valid contracts"
                 )
 
             if args.graph:
+                start = datetime.datetime.now()
                 html = mythril.graph_html(
                     strategy=args.strategy,
                     contract=mythril.contracts[0],
@@ -428,6 +472,33 @@ def main():
                 try:
                     with open(args.graph, "w") as f:
                         f.write(html)
+
+                    end = datetime.datetime.now()
+                    print (end-start)
+                except Exception as e:
+                    exit_with_error(args.outform, "Error saving graph: " + str(e))
+
+            elif args.sgraph:
+                start = datetime.datetime.now()
+                html = mythril.slither_graph_html(
+                    strategy=args.strategy,
+                    contract=mythril.contracts[0],
+                    address=address,
+                    enable_physics=args.enable_physics,
+                    phrackify=args.phrack,
+                    max_depth=args.max_depth,
+                    execution_timeout=args.execution_timeout,
+                    create_timeout=args.create_timeout,
+                    enable_iprof=args.enable_iprof,
+                    file=args.solidity_file
+                )
+
+                try:
+                    with open(args.sgraph, "w") as f:
+                        f.write(html)
+
+                    end = datetime.datetime.now()
+                    print(end - start)
                 except Exception as e:
                     exit_with_error(args.outform, "Error saving graph: " + str(e))
 

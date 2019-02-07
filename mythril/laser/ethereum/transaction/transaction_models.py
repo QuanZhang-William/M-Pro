@@ -101,15 +101,16 @@ class BaseTransaction:
 
         self.return_data = None
 
-    def initial_global_state_from_environment(self, environment, active_function):
+    def initial_global_state_from_environment(self, environment, active_function, last_function_called=None):
         """
 
         :param environment:
         :param active_function:
+        :param last_function_called:
         :return:
         """
         # Initialize the execution environment
-        global_state = GlobalState(self.world_state, environment, None)
+        global_state = GlobalState(self.world_state, environment, None, last_function_called=last_function_called)
         global_state.environment.active_function_name = active_function
         return global_state
 
@@ -120,8 +121,8 @@ class MessageCallTransaction(BaseTransaction):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def initial_global_state(self) -> GlobalState:
-        """Initialize the execution environment."""
+    def initial_global_state(self, last_func_called=None) -> GlobalState:
+        """Initialize the execution environment"""
         environment = Environment(
             self.callee_account,
             self.caller,
@@ -132,7 +133,7 @@ class MessageCallTransaction(BaseTransaction):
             code=self.code or self.callee_account.code,
         )
         return super().initial_global_state_from_environment(
-            environment, active_function="fallback"
+            environment, active_function="fallback", last_function_called=last_func_called
         )
 
     def end(self, global_state: GlobalState, return_data=None, revert=False) -> None:
@@ -156,8 +157,8 @@ class ContractCreationTransaction(BaseTransaction):
             0, concrete_storage=True
         )
 
-    def initial_global_state(self) -> GlobalState:
-        """Initialize the execution environment."""
+    def initial_global_state(self, last_func_called=None) -> GlobalState:
+        """Initialize the execution environment"""
         environment = Environment(
             self.callee_account,
             self.caller,
