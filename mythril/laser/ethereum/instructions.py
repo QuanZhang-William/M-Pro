@@ -1294,7 +1294,7 @@ class Instruction:
 
             for (keccak_key, constraint) in constraints:
                 results += self._sload_helper(
-                    self.copy_helper(global_state), keccak_key, [constraint]
+                    copy(global_state), keccak_key, [constraint]
                 )
             if len(results) > 0:
                 return results
@@ -1376,14 +1376,14 @@ class Instruction:
                 )
                 if condition:
                     return self._sstore_helper(
-                        self.copy_helper(global_state),
+                        copy(global_state),
                         keccak_key,
                         value,
                         key_argument == index_argument,
                     )
 
                 results += self._sstore_helper(
-                    self.copy_helper(global_state),
+                    copy(global_state),
                     keccak_key,
                     value,
                     key_argument == index_argument,
@@ -1393,7 +1393,7 @@ class Instruction:
 
             if len(results) > 0:
                 results += self._sstore_helper(
-                    self.copy_helper(global_state), str(index), value, new
+                    copy(global_state), str(index), value, new
                 )
                 return results
 
@@ -1456,7 +1456,7 @@ class Instruction:
             )
 
 
-        new_state = self.copy_helper(global_state)
+        new_state = copy(global_state)
         # add JUMP gas cost
         min_gas, max_gas = OPCODE_GAS["JUMP"]
         new_state.mstate.min_gas_used += min_gas
@@ -1484,7 +1484,7 @@ class Instruction:
             if (type(condi) == bool and condi) or (
                     isinstance(condi, Bool) and not is_false(condi)
             ):
-                new_state = self.copy_helper(global_state)
+                new_state = copy(global_state)
                 new_state.mstate.min_gas_used += min_gas
                 new_state.mstate.max_gas_used += max_gas
 
@@ -1504,7 +1504,7 @@ class Instruction:
         if (type(negated) == bool and negated) or (
                 isinstance(negated, Bool) and not is_false(negated)
         ):
-            new_state = self.copy_helper(global_state)
+            new_state = copy(global_state)
 
             new_state.mstate.min_gas_used += min_gas
             new_state.mstate.max_gas_used += max_gas
@@ -1624,7 +1624,7 @@ class Instruction:
                     isinstance(negated, Bool) and not is_false(negated)
             ):
 
-                new_state = self.copy_helper(global_state)
+                new_state = copy(global_state)
                 # add JUMPI gas cost
                 new_state.mstate.min_gas_used += min_gas
                 new_state.mstate.max_gas_used += max_gas
@@ -1654,7 +1654,7 @@ class Instruction:
                     isinstance(condi, Bool) and not is_false(condi)
                 ):
 
-                    new_state = self.copy_helper(global_state)
+                    new_state = copy(global_state)
                     # add JUMPI gas cost
                     new_state.mstate.min_gas_used += min_gas
                     new_state.mstate.max_gas_used += max_gas
@@ -2185,10 +2185,4 @@ class Instruction:
 
         return [global_state]
 
-    @staticmethod
-    def copy_helper(state):
-        global_state_copy = copy(state)
-        global_state_copy.last_function_called = state.last_function_called
-
-        return global_state_copy
 

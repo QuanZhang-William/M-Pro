@@ -56,6 +56,7 @@ class GlobalState:
         environment = copy(self.environment)
         mstate = deepcopy(self.mstate)
         transaction_stack = copy(self.transaction_stack)
+        last_function_called = copy(self.last_function_called)
         return GlobalState(
             world_state,
             environment,
@@ -64,6 +65,7 @@ class GlobalState:
             transaction_stack=transaction_stack,
             last_return_data=self.last_return_data,
             annotations=[copy(a) for a in self._annotations],
+            last_function_called=last_function_called
         )
 
     @property
