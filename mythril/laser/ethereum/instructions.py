@@ -1615,6 +1615,29 @@ class Instruction:
 
         # this is the normal case
         else:
+            # False case
+            negated = (
+                simplify(Not(condition)) if isinstance(condition, Bool) else condition == 0
+            )
+            negated.simplify()
+            if (type(negated) == bool and negated) or (
+                    isinstance(negated, Bool) and not is_false(negated)
+            ):
+
+                new_state = self.copy_helper(global_state)
+                # add JUMPI gas cost
+                new_state.mstate.min_gas_used += min_gas
+                new_state.mstate.max_gas_used += max_gas
+
+                # manually set PC to destination
+
+                new_state.mstate.depth += 1
+                new_state.mstate.pc += 1
+                new_state.mstate.constraints.append(negated)
+                states.append(new_state)
+            else:
+                logging.debug("Pruned unreachable states.")
+
             # True case
             # Get jump destination
             index = util.get_instruction_index(disassembly.instruction_list, jump_addr)
@@ -1643,28 +1666,7 @@ class Instruction:
                 else:
                     logging.debug("Pruned unreachable states.")
 
-            # False case
-            negated = (
-                simplify(Not(condition)) if isinstance(condition, Bool) else condition == 0
-            )
-            negated.simplify()
-            if (type(negated) == bool and negated) or (
-                isinstance(negated, Bool) and not is_false(negated)
-            ):
 
-                new_state = self.copy_helper(global_state)
-                # add JUMPI gas cost
-                new_state.mstate.min_gas_used += min_gas
-                new_state.mstate.max_gas_used += max_gas
-
-                # manually set PC to destination
-
-                new_state.mstate.depth += 1
-                new_state.mstate.pc += 1
-                new_state.mstate.constraints.append(negated)
-                states.append(new_state)
-            else:
-                logging.debug("Pruned unreachable states.")
 
             del global_state
             return states
