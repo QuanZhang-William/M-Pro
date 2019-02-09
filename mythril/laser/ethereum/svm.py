@@ -258,7 +258,6 @@ class LaserEVM:
             ):
                 return final_states + [global_state] if track_gas else None
 
-
             try:
                 new_states, op_code = self.execute_state(global_state, priority, title, laser_obj=laser_obj)
             except NotImplementedError:

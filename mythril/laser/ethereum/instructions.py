@@ -86,7 +86,7 @@ class StateTransition(object):
         :return:
         """
         global_state_copy = copy(state)
-        global_state_copy.last_function_called = state.last_function_called
+        #global_state_copy.last_function_called = state.last_function_called
         return func(func_obj, global_state_copy)
 
     def increment_states_pc(self, states: List[GlobalState]) -> List[GlobalState]:
@@ -1551,9 +1551,8 @@ class Instruction:
         # if it is the second msg call transcation,
         # heuristic branching enabled by push4,
         # and ranking is not done
-        if self.priority is not None and len(
-            global_state.world_state.transaction_sequence) > 2 and heuristic_branching and \
-                self.title is not None:
+        if self.priority is not None and heuristic_branching and \
+                self.title is not None and self.check_heuristic_pattern(global_state):
             next_explores = self.priority[self.title]
 
             #TODO: Some testing required
@@ -2185,4 +2184,17 @@ class Instruction:
 
         return [global_state]
 
+    def check_heuristic_pattern(self, global_state):
+        node = global_state.node
 
+        pattern = ['DUP1', 'PUSH4', 'EQ', 'PUSH2', 'JUMPI']
+
+        if len(node.states) != 5:
+            return False
+
+        for i in range(0, len(node.states)):
+            instr = node.states[i].instruction['opcode']
+            if instr != pattern[i]:
+                return False
+
+        return True
