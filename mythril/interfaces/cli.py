@@ -425,7 +425,7 @@ def main():
 
         elif args.slither:
             start = datetime.datetime.now()
-            report = mythril.slither_mythril(
+            report, svm = mythril.slither_mythril(
                     strategy=args.strategy,
                     address=address,
                     modules=[m.strip() for m in args.modules.strip().split(",")]
@@ -444,10 +444,20 @@ def main():
                 "text": report.as_text(),
                 "markdown": report.as_markdown(),
             }
-            print(outputs[args.outform])
-
+            #print(outputs[args.outform])
             end = datetime.datetime.now()
-            print(end - start)
+            try:
+                with open('report_pro.txt', "a+") as f:
+                    f.write('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n')
+                    f.write('$                                                  $\n')
+                    f.write('$                                                  $\n')
+                    f.write('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n')
+                    f.write('Williams test file: ' + args.solidity_file[0] + '\n')
+                    f.write('Total states:' + str(svm.laser.total_states) + '\n')
+                    f.write('' + str(end - start) + '\n')
+                    f.write(outputs[args.outform])
+            except Exception as e:
+                exit_with_error(args.outform, "Error saving report: " + str(e))
 
         elif args.graph or args.fire_lasers or args.sgraph:
             if not mythril.contracts:
@@ -504,7 +514,8 @@ def main():
 
             else:
                 try:
-                    report = mythril.fire_lasers(
+                    start = datetime.datetime.now()
+                    report, svm = mythril.fire_lasers(
                         strategy=args.strategy,
                         address=address,
                         modules=[m.strip() for m in args.modules.strip().split(",")]
@@ -523,7 +534,21 @@ def main():
                         "text": report.as_text(),
                         "markdown": report.as_markdown(),
                     }
-                    print(outputs[args.outform])
+                    end = datetime.datetime.now()
+
+                    try:
+                        with open('report_origin.txt', "a+") as f:
+                            f.write('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n')
+                            f.write('$                                                  $\n')
+                            f.write('$                                                  $\n')
+                            f.write('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n')
+                            f.write('Williams test file: ' + args.solidity_file[0] + '\n')
+                            f.write('Total states:' + str(svm.laser.total_states) + '\n')
+                            f.write('' + str(end - start) + '\n')
+                            f.write(outputs[args.outform])
+                    except Exception as e:
+                        exit_with_error(args.outform, "Error saving report: " + str(e))
+                    #print(outputs[args.outform])
                 except ModuleNotFoundError as e:
                     exit_with_error(
                         args.outform, "Error loading analyis modules: " + format(e)

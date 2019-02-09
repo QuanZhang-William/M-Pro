@@ -651,7 +651,7 @@ class Mythril(object):
         for issue in all_issues:
             report.append_issue(issue)
 
-        return report
+        return report, sym
 
     @staticmethod
     def parse_slither(contract=None, file=None):
@@ -840,7 +840,7 @@ class Mythril(object):
         for issue in all_issues:
             report.append_issue(issue)
 
-        return report
+        return report, sym
 
     def get_state_variable_from_storage(self, address, params=None):
         """
