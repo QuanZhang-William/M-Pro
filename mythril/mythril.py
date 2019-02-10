@@ -606,6 +606,7 @@ class Mythril(object):
         enable_iprof=False):
 
         all_issues = []
+        global_total_states = 0
         for contract in contracts or self.contracts:
             priority = self.parse_slither(contract=contract, file=file[0])
             try:
@@ -643,6 +644,7 @@ class Mythril(object):
                 issue.add_code_info(contract)
 
             all_issues += issues
+            global_total_states += sym.laser.total_states
 
         source_data = Source()
         source_data.get_source_from_contracts_list(self.contracts)
@@ -651,7 +653,7 @@ class Mythril(object):
         for issue in all_issues:
             report.append_issue(issue)
 
-        return report, sym
+        return report, global_total_states
 
     @staticmethod
     def parse_slither(contract=None, file=None):
@@ -798,6 +800,7 @@ class Mythril(object):
         :return:
         """
         all_issues = []
+        global_total_states = 0
         for contract in contracts or self.contracts:
             try:
                 sym = SymExecWrapper(
@@ -832,6 +835,7 @@ class Mythril(object):
                 issue.add_code_info(contract)
 
             all_issues += issues
+            global_total_states += sym.laser.total_states
 
         source_data = Source()
         source_data.get_source_from_contracts_list(self.contracts)
@@ -840,7 +844,7 @@ class Mythril(object):
         for issue in all_issues:
             report.append_issue(issue)
 
-        return report, sym
+        return report, global_total_states
 
     def get_state_variable_from_storage(self, address, params=None):
         """

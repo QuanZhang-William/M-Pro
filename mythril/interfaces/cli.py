@@ -425,7 +425,7 @@ def main():
 
         elif args.slither:
             start = datetime.datetime.now()
-            report, svm = mythril.slither_mythril(
+            report, global_total_states = mythril.slither_mythril(
                     strategy=args.strategy,
                     address=address,
                     modules=[m.strip() for m in args.modules.strip().split(",")]
@@ -453,7 +453,7 @@ def main():
                     f.write('$                                                  $\n')
                     f.write('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n')
                     f.write('Williams test file: ' + args.solidity_file[0] + '\n')
-                    f.write('Total states:' + str(svm.laser.total_states) + '\n')
+                    f.write('Total states:' + str(global_total_states) + '\n')
                     f.write('' + str(end - start) + '\n')
                     f.write(outputs[args.outform])
             except Exception as e:
@@ -515,7 +515,7 @@ def main():
             else:
                 try:
                     start = datetime.datetime.now()
-                    report, svm = mythril.fire_lasers(
+                    report, global_total_states = mythril.fire_lasers(
                         strategy=args.strategy,
                         address=address,
                         modules=[m.strip() for m in args.modules.strip().split(",")]
@@ -543,7 +543,7 @@ def main():
                             f.write('$                                                  $\n')
                             f.write('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n')
                             f.write('Williams test file: ' + args.solidity_file[0] + '\n')
-                            f.write('Total states:' + str(svm.laser.total_states) + '\n')
+                            f.write('Total states:' + str(global_total_states) + '\n')
                             f.write('' + str(end - start) + '\n')
                             f.write(outputs[args.outform])
                     except Exception as e:

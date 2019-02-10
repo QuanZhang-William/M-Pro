@@ -247,6 +247,7 @@ class LaserEVM:
                 and create
                 and self.time + timedelta(seconds=self.create_timeout) <= datetime.now()
             ):
+                print('XXXXXXXXXXXXXX creation timeout XXXXXXXXXXXXXX')
                 return final_states + [global_state] if track_gas else None
 
             if (
@@ -256,6 +257,7 @@ class LaserEVM:
                 <= datetime.now()
                 and not create
             ):
+                print('XXXXXXXXXXXXXX execution timeout XXXXXXXXXXXXXX')
                 return final_states + [global_state] if track_gas else None
 
             try:
