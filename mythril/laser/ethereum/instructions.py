@@ -1590,13 +1590,8 @@ class Instruction:
                         if glb_func_called == obj1.first.function_name and str(second_func_hash) in str(condition):
                             true_state1 = self._true_branch(condition, global_state, jump_addr, disassembly)
                             if key == 'RAW':
-                                self.laser_obj.first_work_list.append(true_state1)
-                            elif key == 'WAR':
-                                self.laser_obj.second_work_list.append(true_state1)
-                            elif key == 'WAW':
                                 self.laser_obj.third_work_list.append(true_state1)
-                            elif key == 'RAR':
-                                self.laser_obj.forth_work_list.append(true_state1)
+
 
                             # true branch will be removed from the work list.
                             # TODO: Refactor this part

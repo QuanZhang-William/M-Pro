@@ -46,17 +46,6 @@ def heuristic_message_call_helper(laser_evm, callee_address: str, priority=None)
             jump = False
             continue
 
-        for priority_list in priority['WAR']:
-            if name == priority_list.first.function_name:
-                laser_evm.second_order_work_list.append(open_state)
-                laser_evm.open_states.remove(open_state)
-                jump = True
-                break
-
-        if jump:
-            jump = False
-            continue
-
         for priority_list in priority['WAW']:
             if name == priority_list.first.function_name:
                 laser_evm.third_order_work_list.append(open_state)
@@ -68,15 +57,6 @@ def heuristic_message_call_helper(laser_evm, callee_address: str, priority=None)
             jump = False
             continue
 
-        for priority_list in priority['RAR']:
-            if name == priority_list.first.function_name:
-                laser_evm.forth_order_work_list.append(open_state)
-                laser_evm.open_states.remove(open_state)
-                jump = True
-                break
-        if jump:
-            jump = False
-            continue
 
     laser_evm.ranking.append(laser_evm.first_order_work_list)
     laser_evm.ranking.append(laser_evm.second_order_work_list)
@@ -121,15 +101,7 @@ def heuristic_message_call_helper(laser_evm, callee_address: str, priority=None)
         # Execute the new open states added to the work list in Instruction.jumpi_ function
 
         if title == 'RAW':
-            for gs in laser_evm.second_work_list:
-                laser_evm.work_list.append(gs)
-            laser_evm.exec(priority=priority, title=title, laser_obj=laser_evm)
-        elif title == 'WAR':
             for gs in laser_evm.third_work_list:
-                laser_evm.work_list.append(gs)
-            laser_evm.exec(priority=priority, title=title, laser_obj=laser_evm)
-        elif title == 'WAW':
-            for gs in laser_evm.forth_work_list:
                 laser_evm.work_list.append(gs)
             laser_evm.exec(priority=priority, title=title, laser_obj=laser_evm)
 

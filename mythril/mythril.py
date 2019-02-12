@@ -723,9 +723,7 @@ class Mythril(object):
         priority = {}
 
         raw = []
-        war = []
         waw = []
-        rar = []
 
         visited = set()
 
@@ -739,16 +737,6 @@ class Mythril(object):
                             visited.add(mapping)
         priority['RAW'] = raw
 
-        for rd_key, rd_value in reading_obj_list.items():
-            if rd_key in writing_obj_list:
-                for rd_value in reading_obj_list[rd_key]:
-                    for temp in writing_obj_list[rd_key]:
-                        mapping = MappingObjTuple(rd_value, temp)
-                        if mapping not in visited:
-                            war.append(mapping)
-                            visited.add(mapping)
-        priority['WAR'] = war
-
         for wt_key, wt_value in writing_obj_list.items():
             for write1 in writing_obj_list[wt_key]:
                 for write2 in writing_obj_list[wt_key]:
@@ -757,17 +745,6 @@ class Mythril(object):
                         waw.append(mapping)
                         visited.add(mapping)
         priority['WAW'] = waw
-
-        for rd_key, rd_value in reading_obj_list.items():
-            for read1 in reading_obj_list[rd_key]:
-                for read2 in reading_obj_list[rd_key]:
-                    if read1 != read2:
-                        mapping = MappingObjTuple(read1, read2)
-                        if mapping not in visited:
-                            rar.append(mapping)
-                            visited.add(mapping)
-        priority['RAR'] = rar
-
 
 
         return priority
