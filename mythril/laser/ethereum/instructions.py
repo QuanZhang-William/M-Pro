@@ -1533,7 +1533,7 @@ class Instruction:
             global set_fallback_func
             # if fall back func is not set yet
             if set_fallback_func:
-                if 'Not(ULE(4,calldatasize))' in str(condition):
+                if 'Not(ULE(4,2_calldatasize))' in str(condition):
                     global fallback_pointer
                     fallback_pointer = jump_addr
                     set_fallback_func = False

@@ -52,12 +52,12 @@ class MappingObjTuple:
         self.second = second
 
     def __eq__(self, other):
-        return self.first == other.first \
-               and self.second == other.second
+        return self.first.function_name == other.first.function_name \
+               and self.second.function_name == other.second.function_name
 
     def __hash__(self):
-        return hash(('first', self.first,
-                     'second', self.second))
+        return hash((self.first.function_name,
+                     self.second.function_name))
 
 
 class Mythril(object):
@@ -752,11 +752,10 @@ class Mythril(object):
         for wt_key, wt_value in writing_obj_list.items():
             for write1 in writing_obj_list[wt_key]:
                 for write2 in writing_obj_list[wt_key]:
-                    if write1 != write2:
-                        mapping = MappingObjTuple(write1, write2)
-                        if mapping not in visited:
-                            waw.append(MappingObjTuple(write1, write2))
-                            visited.add(mapping)
+                    mapping = MappingObjTuple(write1, write2)
+                    if mapping not in visited:
+                        waw.append(mapping)
+                        visited.add(mapping)
         priority['WAW'] = waw
 
         for rd_key, rd_value in reading_obj_list.items():
@@ -765,7 +764,7 @@ class Mythril(object):
                     if read1 != read2:
                         mapping = MappingObjTuple(read1, read2)
                         if mapping not in visited:
-                            rar.append(MappingObjTuple(read1, read2))
+                            rar.append(mapping)
                             visited.add(mapping)
         priority['RAR'] = rar
 
