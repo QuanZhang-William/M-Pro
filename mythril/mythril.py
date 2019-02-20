@@ -5,7 +5,8 @@
    http://www.github.com/b-mueller/mythril
 """
 
-
+import itertools
+import copy
 import codecs
 import logging
 import os
@@ -24,6 +25,8 @@ from ethereum import utils
 from solc.exceptions import SolcError
 
 from mythril.ethereum import util
+from mythril.priority import WAWNode
+from mythril.priority import RAWNode
 from mythril.ethereum.evmcontract import EVMContract
 from mythril.ethereum.interface.rpc.client import EthJsonRpc
 from mythril.ethereum.interface.rpc.exceptions import ConnectionError
@@ -44,12 +47,6 @@ log = logging.getLogger(__name__)
 
 
 class MappingObjTuple:
-    first = None
-    second = None
-
-    def __init__(self, first, second):
-        self.first = first
-        self.second = second
 
     def __eq__(self, other):
         return self.first.function_name == other.first.function_name \
@@ -608,7 +605,9 @@ class Mythril(object):
         all_issues = []
         global_total_states = 0
         for contract in contracts or self.contracts:
-            priority = self.parse_slither(contract=contract, file=file[0])
+            #priority = self.parse_slither(contract=contract, file=file[0])
+            priority = self.parse_slither_deeper(contract=contract, file=file[0], transaction_count=transaction_count)
+
             try:
                 sym = SymExecWrapper(
                 contract,
@@ -622,11 +621,11 @@ class Mythril(object):
                 max_depth=max_depth,
                 execution_timeout=execution_timeout,
                 create_timeout=create_timeout,
-                priority=priority,
                 transaction_count=transaction_count,
                 modules=modules,
                 compulsory_statespace=False,
                 enable_iprof=enable_iprof,
+                heuristic=True
                 )
                 issues = fire_lasers(sym, modules)
 
@@ -654,6 +653,85 @@ class Mythril(object):
             report.append_issue(issue)
 
         return report, global_total_states
+
+    @staticmethod
+    def parse_slither_deeper(contract=None, file=None, transaction_count=2):
+        if file is None:
+            print('file is not specified for slither')
+            return None
+
+        if contract.name is None:
+            print('contract cannot be none for slither')
+            return None
+
+        if transaction_count < 2:
+            return None
+
+        try:
+            slither_obj = slither.Slither(file)
+            slither_contract = slither_obj.get_contract_from_name(contract.name)
+        except:
+            print("Slither error, cannot analyze dependency")
+            return None
+
+        # find dependent functions for each function
+        # key: func (Slither_Func)
+        # value: set() all dependent functions of func (Slither_Func)
+        # TODO: Resolve dependency in variable read in functions
+        function_dependency_raw = {}
+        for fun in slither_contract.functions:
+            temp = set()
+            if fun.full_name not in contract.disassembly.slither_mappings_dict.keys():
+                continue
+
+            for var_read in fun.state_variables_read:
+                dependent_funcs = slither_contract.get_functions_writing_to_variable_including_internal_call(var_read)
+                temp = temp.union(dependent_funcs)
+
+            function_dependency_raw[fun.full_name] = temp
+
+        function_dependency_waw = {}
+        for fun in slither_contract.functions:
+            temp = set()
+            if fun.full_name not in contract.disassembly.slither_mappings_dict.keys():
+                continue
+
+            for var_write in fun.state_variables_written:
+                dependent_funcs = slither_contract.get_functions_writing_to_variable_including_internal_call(var_write)
+                temp = temp.union(dependent_funcs)
+
+            function_dependency_waw[fun.full_name] = temp
+
+
+        # TODO: handle fallback functions
+        #if fun.full_name == "fallback()":
+        #    temp = MappingObj('fallback', '0x0000000', 0)
+        #    function_dependency_mythril_raw[wt_key].add(temp)
+
+
+        # find function call sequences (permutations)
+        # dict {call depth: set(functions in this depth)}
+        waw_total_set = set()
+        for root_fun, dependency in function_dependency_waw.items():
+            waw_dependency = set(itertools.product(dependency, repeat=transaction_count))
+            waw_total_set = waw_total_set.union(waw_dependency)
+
+
+        waw_root = WAWNode('root', set(), 0)
+        waw_root.add_children(waw_total_set, 0, transaction_count - 1)
+
+        raw_root = RAWNode('root', set(), 0, None)
+        for root_fun, dependency in function_dependency_raw.items():
+            raw_dependency = set(itertools.product(dependency, repeat=transaction_count - 1))
+            raw_root.add_children(raw_dependency, 0, transaction_count - 2, root_fun)
+
+
+        priority = {'RAW': raw_root,
+                    'WAW': waw_root}
+
+
+        return priority
+
 
     @staticmethod
     def parse_slither(contract=None, file=None):

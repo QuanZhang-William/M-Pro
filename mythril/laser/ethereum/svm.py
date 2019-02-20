@@ -108,9 +108,8 @@ class LaserEVM:
 
         log.info("LASER EVM initialized with dynamic loader: " + str(dynamic_loader))
         self.first_order_work_list = ['RAW']
-        self.second_order_work_list = ['WAR']
-        self.third_order_work_list = ['WAW']
-        self.forth_order_work_list = ['RAR']
+        self.second_order_work_list = ['WAW']
+
         self.ranking = []
 
         self.bad_bit = False
@@ -134,7 +133,7 @@ class LaserEVM:
         main_address=None,
         creation_code=None,
         contract_name=None,
-        priority=None
+        heuristic=False
     ) -> None:
         """
 
@@ -168,7 +167,7 @@ class LaserEVM:
                     "Increase the resources for creation execution (--max-depth or --create-timeout)"
                 )
 
-            self._execute_transactions(created_account.address, priority)
+            self._execute_transactions(created_account.address, heuristic)
 
         log.info("Finished symbolic execution")
         if self.requires_statespace:
@@ -190,7 +189,7 @@ class LaserEVM:
             log.info("Instruction Statistics:\n{}".format(self.iprof))
 
 
-    def _execute_transactions(self, address, priority=None):
+    def _execute_transactions(self, address, heuristic=False):
         """
         This function executes multiple transactions on the address based on the coverage
         :param address: Address of the contract
@@ -208,11 +207,10 @@ class LaserEVM:
                 )
             )
 
-            if priority is None:
-                execute_message_call(self, address, priority)
+            if heuristic:
+                heuristic_message_call(self, address)
             else:
-                heuristic_message_call(self, address, priority)
-
+                execute_message_call(self, address)
             end_coverage = self._get_covered_instructions()
 
             log.info(
@@ -248,7 +246,7 @@ class LaserEVM:
                 and self.time + timedelta(seconds=self.create_timeout) <= datetime.now()
             ):
                 print('XXXXXXXXXXXXXX creation timeout XXXXXXXXXXXXXX')
-                return final_states + [global_state] if track_gas else None
+                #return final_states + [global_state] if track_gas else None
 
             if (
                 self.execution_timeout
@@ -258,7 +256,7 @@ class LaserEVM:
                 and not create
             ):
                 print('XXXXXXXXXXXXXX execution timeout XXXXXXXXXXXXXX')
-                return final_states + [global_state] if track_gas else None
+                #return final_states + [global_state] if track_gas else None
 
             try:
                 new_states, op_code = self.execute_state(global_state, priority, title, laser_obj=laser_obj)

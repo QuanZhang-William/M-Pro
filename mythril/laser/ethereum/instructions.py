@@ -1552,7 +1552,7 @@ class Instruction:
         # heuristic branching enabled by push4,
         # and ranking is not done
         if self.priority is not None and heuristic_branching and \
-                self.title is not None and self.check_heuristic_pattern(global_state):
+                self.check_heuristic_pattern(global_state):
             next_explores = self.priority[self.title]
 
             #TODO: Some testing required

@@ -19,49 +19,47 @@ log = logging.getLogger(__name__)
 
 CREATOR_ADDRESS = 0xAFFEAFFEAFFEAFFEAFFEAFFEAFFEAFFEAFFEAFFE
 ATTACKER_ADDRESS = 0xDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF
+FUNCTION_DEPENDENCY_RAW = {}
+FUNCTION_DEPENDENCY_WAW = {}
 
-def heuristic_message_call(laser_evm, callee_address: str, priority=None):
-    if len(laser_evm.open_states) > 0 and len(laser_evm.open_states[0].transaction_sequence) == 2:
-        heuristic_message_call_helper(laser_evm, callee_address, priority)
+
+def heuristic_message_call(laser_evm, callee_address: str):
+    if len(laser_evm.open_states) > 0 and len(laser_evm.open_states[0].transaction_sequence) >= 2:
+        heuristic_message_call_helper(laser_evm, callee_address)
     else:
-        execute_message_call(laser_evm, callee_address, priority)
+        execute_message_call(laser_evm, callee_address)
 
 
-def heuristic_message_call_helper(laser_evm, callee_address: str, priority=None):
-    jump = False
+def heuristic_message_call_helper(laser_evm, callee_address: str):
+
+    # at the end of transaction depth 1, figure out the function dependency for follow up transactions
+    if len(laser_evm.open_states[0].transaction_sequence) == 2:
+        # for WAW
+        for open_state in laser_evm.open_states:
+            func_name = open_state.node.function_name
+            if func_name not in FUNCTION_DEPENDENCY_WAW.keys():
+                FUNCTION_DEPENDENCY_WAW[func_name] = set()
+
+                for var_write in
+
+
+
 
     open_states_copy = copy(laser_evm.open_states)
+    transaction_depth = len(laser_evm.open_states[0].transaction_sequence)
 
     for open_state in open_states_copy:
-        name = open_state.node.function_name
+        func_name = open_state.node.function_name
+        if func_name in priority['RAW'][transaction_depth - 1]:
+            laser_evm.first_order_work_list.append(open_state)
+            laser_evm.open_states.remove(open_state)
 
-        for priority_list in priority['RAW']:
-            if name == priority_list.first.function_name:
-                laser_evm.first_order_work_list.append(open_state)
-                laser_evm.open_states.remove(open_state)
-                jump = True
-                break
-
-        if jump:
-            jump = False
-            continue
-
-        for priority_list in priority['WAW']:
-            if name == priority_list.first.function_name:
-                laser_evm.third_order_work_list.append(open_state)
-                laser_evm.open_states.remove(open_state)
-                jump = True
-                break
-
-        if jump:
-            jump = False
-            continue
-
+        elif func_name in priority['WAW'][transaction_depth - 1]:
+            laser_evm.second_order_work_list.append(open_state)
+            laser_evm.open_states.remove(open_state)
 
     laser_evm.ranking.append(laser_evm.first_order_work_list)
     laser_evm.ranking.append(laser_evm.second_order_work_list)
-    laser_evm.ranking.append(laser_evm.third_order_work_list)
-    laser_evm.ranking.append(laser_evm.forth_order_work_list)
 
     del laser_evm.open_states[:]
 
@@ -99,14 +97,12 @@ def heuristic_message_call_helper(laser_evm, callee_address: str, priority=None)
         laser_evm.exec(priority=priority, title=title, laser_obj=laser_evm)
 
         # Execute the new open states added to the work list in Instruction.jumpi_ function
-
         if title == 'RAW':
-            for gs in laser_evm.third_work_list:
+            for gs in laser_evm.second_work_list:
                 laser_evm.work_list.append(gs)
             laser_evm.exec(priority=priority, title=title, laser_obj=laser_evm)
 
-
-def execute_message_call(laser_evm, callee_address: str, priority=None) -> None:
+def execute_message_call(laser_evm, callee_address: str) -> None:
 
     """ Executes a message call transaction from all open states """
     # TODO: Resolve circular import between .transaction and ..svm to import LaserEVM here
@@ -144,11 +140,11 @@ def execute_message_call(laser_evm, callee_address: str, priority=None) -> None:
         # the open states from last iterations are appended to work list here
         _setup_global_state_for_execution(laser_evm, transaction, open_world_state.node.function_name)
 
-    laser_evm.exec(priority=None)
+    laser_evm.exec()
 
 
 def execute_contract_creation(
-    laser_evm, contract_initialization_code, contract_name=None, priority=None
+    laser_evm, contract_initialization_code, contract_name=None
 ) -> Account:
     """Executes a contract creation transaction from all open states.
 

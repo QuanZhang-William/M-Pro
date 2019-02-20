@@ -38,7 +38,7 @@ class SymExecWrapper:
         modules=(),
         compulsory_statespace=True,
         enable_iprof=False,
-        priority = None
+        heuristic = False
     ):
         """
 
@@ -100,14 +100,14 @@ class SymExecWrapper:
 
         if isinstance(contract, SolidityContract):
             self.laser.sym_exec(
-                creation_code=contract.creation_code, contract_name=contract.name, priority=priority
+                creation_code=contract.creation_code, contract_name=contract.name, heuristic=heuristic
             )
         elif isinstance(contract, EVMContract) and contract.creation_code:
             self.laser.sym_exec(
-                creation_code=contract.creation_code, contract_name=contract.name, priority=priority
+                creation_code=contract.creation_code, contract_name=contract.name, heuristic=heuristic
             )
         else:
-            self.laser.sym_exec(address, priority=priority)
+            self.laser.sym_exec(address, heuristic=heuristic)
 
         if not requires_statespace:
             return

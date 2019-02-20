@@ -40,11 +40,4 @@ contract SecretRegistry {
         }
         return completeSuccess;
     }
-
-    /// @notice Get the stored block number at which the secret was revealed.
-    /// @param secrethash The hash of the registered secret `keccak256(secret)`.
-    /// @return The block number at which the secret was revealed.
-    function getSecretRevealBlockHeight(bytes32 secrethash) public view returns (uint256) {
-        return secrethash_to_block[secrethash];
-    }
 }
