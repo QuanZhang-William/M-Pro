@@ -5,19 +5,15 @@ contract WeakRandom {
     uint a = 10;
     uint b = 100;
 
-    //function test() public{
-    //    a = 100;
-    //}
 
-    function () payable external {
+    function () external {
         a = 20;
         if(a == 20){
-            a = 30;
+            a = 10;
         }
-        //chooseWinner();
     }
 
-    function chooseWinner() private {
+    function chooseWinner() public {
         a = 100;
     }
 }

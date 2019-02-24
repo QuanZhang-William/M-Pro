@@ -28,7 +28,7 @@ from mythril.laser.ethereum.transaction import (
 )
 
 from mythril.laser.ethereum.iprof import InstructionProfiler
-from mythril.laser.ethereum.instructions import fallback_pointer
+import mythril.laser.ethereum.instructions as instructions
 
 
 log = logging.getLogger(__name__)
@@ -133,7 +133,8 @@ class LaserEVM:
         main_address=None,
         creation_code=None,
         contract_name=None,
-        heuristic=False
+        heuristic=None,
+        disassembly=None
     ) -> None:
         """
 
@@ -167,7 +168,7 @@ class LaserEVM:
                     "Increase the resources for creation execution (--max-depth or --create-timeout)"
                 )
 
-            self._execute_transactions(created_account.address, heuristic)
+            self._execute_transactions(created_account.address, heuristic, disassembly)
 
         log.info("Finished symbolic execution")
         if self.requires_statespace:
@@ -189,7 +190,7 @@ class LaserEVM:
             log.info("Instruction Statistics:\n{}".format(self.iprof))
 
 
-    def _execute_transactions(self, address, heuristic=False):
+    def _execute_transactions(self, address, heuristic=None, disassembly=None):
         """
         This function executes multiple transactions on the address based on the coverage
         :param address: Address of the contract
@@ -207,10 +208,10 @@ class LaserEVM:
                 )
             )
 
-            if heuristic:
-                heuristic_message_call(self, address)
+            if heuristic is None:
+                execute_message_call(self, address, disassembly)
             else:
-                execute_message_call(self, address)
+                heuristic_message_call(self, address, heuristic, self.transaction_count, disassembly)
             end_coverage = self._get_covered_instructions()
 
             log.info(
@@ -231,7 +232,7 @@ class LaserEVM:
             )
         return total_covered_instructions
 
-    def exec(self, create=False, track_gas=False, priority=None, title=None, laser_obj=None) -> Union[List[GlobalState], None]:
+    def exec(self, disassembly, create=False, track_gas=False, priotity=None) -> Union[List[GlobalState], None, ]:
         """
 
         :param create:
@@ -259,7 +260,7 @@ class LaserEVM:
                 #return final_states + [global_state] if track_gas else None
 
             try:
-                new_states, op_code = self.execute_state(global_state, priority, title, laser_obj=laser_obj)
+                new_states, op_code = self.execute_state(global_state, disassembly, priority=priotity)
             except NotImplementedError:
                 log.debug("Encountered unimplemented instruction")
                 continue
@@ -289,7 +290,7 @@ class LaserEVM:
         self.open_states.append(global_state.world_state)
 
     def execute_state(
-        self, global_state: GlobalState, priority=None, title=None, laser_obj=None
+        self, global_state: GlobalState, disassembly, priority=None, title=None, laser_obj=None
     ) -> Tuple[List[GlobalState], Union[str, None]]:
         """
 
@@ -307,7 +308,7 @@ class LaserEVM:
         self._execute_pre_hook(op_code, global_state)
         try:
             self._measure_coverage(global_state)
-            new_global_states = Instruction(op_code, self.dynamic_loader, self.iprof, priority, title, laser_obj).evaluate(
+            new_global_states = Instruction(op_code, self.dynamic_loader, self.iprof, disassembly, priority, title, laser_obj).evaluate(
                 global_state
             )
 
@@ -519,8 +520,8 @@ class LaserEVM:
                 + ":"
                 + new_node.function_name
             )
-        elif address == 0 or address == fallback_pointer:
-            environment.active_function_name = "fallback"
+        elif address == 0 or address == instructions.fallback_pointer:
+            environment.active_function_name = "fallback()"
 
         new_node.function_name = environment.active_function_name
 

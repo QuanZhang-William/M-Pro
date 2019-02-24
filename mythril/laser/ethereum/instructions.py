@@ -160,13 +160,14 @@ fallback_pointer = 0
 class Instruction:
     """Instruction class is used to mutate a state according to the current
     instruction."""
-    def __init__(self, op_code: str, dynamic_loader: DynLoader, iprof=None, priority=None, title=None, laser_obj=None):
+    def __init__(self, op_code: str, dynamic_loader: DynLoader, iprof=None, disassembly=None, priority=None, title=None, laser_obj=None):
         self.dynamic_loader = dynamic_loader
         self.op_code = op_code.upper()
         self.priority = priority
         self.title = title
         self.laser_obj = laser_obj
         self.iprof = iprof
+        self.disassembly = disassembly
 
 
     def evaluate(self, global_state: GlobalState, post=False) -> List[GlobalState]:
@@ -1533,9 +1534,11 @@ class Instruction:
             global set_fallback_func
             # if fall back func is not set yet
             if set_fallback_func:
-                if 'Not(ULE(4,2_calldatasize))' in str(condition):
+                if 'ULT(2_calldatasize, 4)' == str(condition):
                     global fallback_pointer
                     fallback_pointer = jump_addr
+                    self.disassembly.function_name_to_address['fallback()'] = jump_addr
+
                     set_fallback_func = False
 
         except TypeError:
@@ -1553,17 +1556,28 @@ class Instruction:
         # and ranking is not done
         if self.priority is not None and heuristic_branching and \
                 self.check_heuristic_pattern(global_state):
-            next_explores = self.priority[self.title]
+            next_explores = global_state.world_state.next_explores
 
-            #TODO: Some testing required
+            #Some testing required
             if next_explores is None:
                 return
 
-            # for all the tuple in the current priority level
-            # check if the current function signature is in the current priority list
-            # if it is return both branches
-            # then remove the tuple from the priority list
-            for obj in next_explores:
+            # TODO: map function to jump ADDR
+            if jump_addr in next_explores:
+                true_state = self._true_branch(condition, global_state, jump_addr, disassembly)
+                false_state = self._false_branch(condition, global_state)
+                states.append(false_state)
+                states.append(true_state)
+
+            else:
+                false_state = self._false_branch(condition, global_state)
+                states.append(false_state)
+
+            heuristic_branching = False
+            del global_state
+            return states
+
+            '''for obj in next_explores:
                 hash = int(obj.second.function_hash,16)
                 func = obj.first.function_name
                 if func == global_state.last_function_called and str(hash) in str(condition):
@@ -1605,7 +1619,7 @@ class Instruction:
             states.append(false_state)
             heuristic_branching = False
             del global_state
-            return states
+            return states'''
 
         # this is the normal case
         else:
@@ -2182,14 +2196,23 @@ class Instruction:
     def check_heuristic_pattern(self, global_state):
         node = global_state.node
 
+        prefix = 'JUMPDEST'
         pattern = ['DUP1', 'PUSH4', 'EQ', 'PUSH2', 'JUMPI']
+        pattern2 = ['JUMPDEST','DUP1', 'PUSH4', 'EQ', 'PUSH2', 'JUMPI']
 
-        if len(node.states) != 5:
+        if len(node.states) != 5 and len(node.states) != 6:
             return False
 
-        for i in range(0, len(node.states)):
-            instr = node.states[i].instruction['opcode']
-            if instr != pattern[i]:
-                return False
+        instr = node.states[0].instruction['opcode']
+        if instr == prefix:
+            for i in range(1, len(node.states)):
+                instr = node.states[i].instruction['opcode']
+                if instr != pattern[i - 1]:
+                    return False
+        else:
+            for i in range(0, len(node.states)):
+                instr = node.states[i].instruction['opcode']
+                if instr != pattern[i]:
+                    return False
 
         return True

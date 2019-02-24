@@ -23,86 +23,96 @@ FUNCTION_DEPENDENCY_RAW = {}
 FUNCTION_DEPENDENCY_WAW = {}
 
 
-def heuristic_message_call(laser_evm, callee_address: str):
+def heuristic_message_call(laser_evm, callee_address: str, heuristic, transaction_count, disassembly):
     if len(laser_evm.open_states) > 0 and len(laser_evm.open_states[0].transaction_sequence) >= 2:
-        heuristic_message_call_helper(laser_evm, callee_address)
+        heuristic_message_call_helper(laser_evm, callee_address, transaction_count, heuristic, disassembly)
     else:
-        execute_message_call(laser_evm, callee_address)
+        execute_message_call(laser_evm, callee_address, disassembly)
 
 
-def heuristic_message_call_helper(laser_evm, callee_address: str):
-
-    # at the end of transaction depth 1, figure out the function dependency for follow up transactions
-    if len(laser_evm.open_states[0].transaction_sequence) == 2:
-        # for WAW
-        for open_state in laser_evm.open_states:
-            func_name = open_state.node.function_name
-            if func_name not in FUNCTION_DEPENDENCY_WAW.keys():
-                FUNCTION_DEPENDENCY_WAW[func_name] = set()
-
-                for var_write in
-
-
-
-
-    open_states_copy = copy(laser_evm.open_states)
-    transaction_depth = len(laser_evm.open_states[0].transaction_sequence)
-
-    for open_state in open_states_copy:
-        func_name = open_state.node.function_name
-        if func_name in priority['RAW'][transaction_depth - 1]:
-            laser_evm.first_order_work_list.append(open_state)
-            laser_evm.open_states.remove(open_state)
-
-        elif func_name in priority['WAW'][transaction_depth - 1]:
-            laser_evm.second_order_work_list.append(open_state)
-            laser_evm.open_states.remove(open_state)
-
-    laser_evm.ranking.append(laser_evm.first_order_work_list)
-    laser_evm.ranking.append(laser_evm.second_order_work_list)
-
+def heuristic_message_call_helper(laser_evm, callee_address: str, transaction_count, priority, disassembly):
+    open_states = laser_evm.open_states[:]
     del laser_evm.open_states[:]
 
-    for items in laser_evm.ranking:
-        title = items[0]
-        list1 = items[1:]
 
-        for open_world_state in list1:
-            if open_world_state[callee_address].deleted:
-                log.debug("Can not execute dead contract, skipping.")
+    for open_state in open_states:
+        if open_state[callee_address].deleted:
+            log.debug("Can not execute dead contract, skipping.")
+            continue
+
+        last_func_called = open_state.node.function_name
+
+        if len(open_state.transaction_sequence) == transaction_count:
+            if transaction_count == 2:
+                last_explore = priority['dependency'][last_func_called].keys()
+
+                last_explore_addr = set()
+
+                for func in last_explore:
+                    last_explore_addr.add(disassembly.function_name_to_address[func])
+
+                # there is no read based on this function, prune the path
+                if len(last_explore) == 0:
+                    continue
+                open_state.next_explores = last_explore_addr
+            else:
+                open_state.next_explores = open_state.last_func
+
+        elif len(open_state.transaction_sequence) == 2:
+            next_explores = priority['dependency'].keys()
+            last_explore = priority['dependency'][last_func_called].keys()
+
+            next_explores_addr = set()
+            last_explore_addr = set()
+
+            for func in next_explores:
+                next_explores_addr.add(disassembly.function_name_to_address[func])
+
+            for func in last_explore:
+                last_explore_addr.add(disassembly.function_name_to_address[func])
+
+            # there is no read based on this function, prune the path
+            if len(next_explores) == 0:
                 continue
 
-            last_func_called = open_world_state.node.function_name
-            next_transaction_id = get_next_transaction_id()
-            transaction = MessageCallTransaction(
-                world_state=open_world_state,
-                callee_account=open_world_state[callee_address],
-                caller=symbol_factory.BitVecVal(ATTACKER_ADDRESS, 256),
-                identifier=next_transaction_id,
-                call_data=SymbolicCalldata(next_transaction_id),
-                gas_price=symbol_factory.BitVecSym(
-                    "gas_price{}".format(next_transaction_id), 256
-                ),
-                call_value=symbol_factory.BitVecSym(
-                    "call_value{}".format(next_transaction_id), 256
-                ),
-                origin=symbol_factory.BitVecSym(
-                    "origin{}".format(next_transaction_id), 256
-                ),
-                gas_limit=8000000,  # block gas limit
-            )
+            open_state.root_func = last_func_called
+            open_state.last_func = last_explore_addr
+            open_state.next_explores = next_explores_addr
+        else:
+            temp = priority['permutation'][last_func_called]
+            next_explores_addr = set()
 
-            # the open states from last iterations are appended to work list here
-            _setup_global_state_for_execution(laser_evm, transaction, last_func_called)
-        laser_evm.exec(priority=priority, title=title, laser_obj=laser_evm)
+            for func in temp:
+                next_explores_addr.add(disassembly.function_name_to_address[func])
 
-        # Execute the new open states added to the work list in Instruction.jumpi_ function
-        if title == 'RAW':
-            for gs in laser_evm.second_work_list:
-                laser_evm.work_list.append(gs)
-            laser_evm.exec(priority=priority, title=title, laser_obj=laser_evm)
+            open_state.next_explores = next_explores_addr
 
-def execute_message_call(laser_evm, callee_address: str) -> None:
+        next_transaction_id = get_next_transaction_id()
+        transaction = MessageCallTransaction(
+            world_state=open_state,
+            identifier=next_transaction_id,
+            gas_price=symbol_factory.BitVecSym(
+                "gas_price{}".format(next_transaction_id), 256
+            ),
+            gas_limit=8000000,  # block gas limit
+            origin=symbol_factory.BitVecSym(
+                "origin{}".format(next_transaction_id), 256
+            ),
+            caller=symbol_factory.BitVecVal(ATTACKER_ADDRESS, 256),
+            callee_account=open_state[callee_address],
+            call_data=SymbolicCalldata(next_transaction_id),
+            call_value=symbol_factory.BitVecSym(
+                "call_value{}".format(next_transaction_id), 256
+            ),
+        )
+
+        # the open states from last iterations are appended to work list here
+        _setup_global_state_for_execution(laser_evm, transaction, open_state.node.function_name)
+
+    laser_evm.exec(disassembly, priotity=priority)
+
+
+def execute_message_call(laser_evm, callee_address: str, disassembly) -> None:
 
     """ Executes a message call transaction from all open states """
     # TODO: Resolve circular import between .transaction and ..svm to import LaserEVM here
@@ -140,7 +150,7 @@ def execute_message_call(laser_evm, callee_address: str) -> None:
         # the open states from last iterations are appended to work list here
         _setup_global_state_for_execution(laser_evm, transaction, open_world_state.node.function_name)
 
-    laser_evm.exec()
+    laser_evm.exec(disassembly)
 
 
 def execute_contract_creation(

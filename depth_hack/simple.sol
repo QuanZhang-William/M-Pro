@@ -1,10 +1,7 @@
 contract Caller {
     uint public a = 0;
     uint public b = 0;
-
-    function readA() public returns(uint returnA){
-        return a;
-    }
+    uint public c = 0;
 
     function writeA(uint input) public{
         a = 10;
@@ -14,9 +11,19 @@ contract Caller {
         b = 10;
     }
 
-    function suicide(address payable addr) public{
+    function writC(uint input) public{
+        c = 10;
+    }
+
+    function RAB(address payable addr) public{
         if (a == 10 && b == 10){
             selfdestruct(addr);
         }
     }
+
+    function RBC(address payable addr) public{
+    if (c == 10 && b == 10){
+        selfdestruct(addr);
+    }
+}
 }

@@ -500,7 +500,8 @@ def main():
                     execution_timeout=args.execution_timeout,
                     create_timeout=args.create_timeout,
                     enable_iprof=args.enable_iprof,
-                    file=args.solidity_file
+                    file=args.solidity_file,
+                    transaction_count=args.transaction_count
                 )
 
                 try:

@@ -23,6 +23,9 @@ class WorldState:
         self.node = None
         self.transaction_sequence = transaction_sequence or []
         self._annotations = annotations or []
+        self.root_func = None
+        self.last_func = set()
+        self.next_explores = set()
 
     def __getitem__(self, item: str) -> Account:
         """Gets an account from the worldstate using item as key.
@@ -44,6 +47,9 @@ class WorldState:
         )
         new_world_state.accounts = copy(self.accounts)
         new_world_state.node = self.node
+        new_world_state.root_func = self.root_func
+        new_world_state.last_func = self.last_func
+        new_world_state.next_explores = self.next_explores
         return new_world_state
 
     def create_account(

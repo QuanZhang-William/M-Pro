@@ -568,9 +568,10 @@ class Mythril(object):
         execution_timeout=None,
         create_timeout=None,
         enable_iprof=False,
-        file=None
+        file=None,
+        transaction_count=None,
     ):
-        priority = self.parse_slither(contract=contract, file=file[0])
+        priority = self.parse_slither_deeper(contract=contract, file=file[0], transaction_count=transaction_count)
         sym = SymExecWrapper(
             contract,
             address,
@@ -584,7 +585,7 @@ class Mythril(object):
             execution_timeout=execution_timeout,
             create_timeout=create_timeout,
             enable_iprof=enable_iprof,
-            priority = priority
+            heuristic=priority
         )
         return generate_graph(sym, physics=enable_physics, phrackify=phrackify)
 
@@ -625,7 +626,7 @@ class Mythril(object):
                 modules=modules,
                 compulsory_statespace=False,
                 enable_iprof=enable_iprof,
-                heuristic=True
+                heuristic=priority
                 )
                 issues = fire_lasers(sym, modules)
 
@@ -674,11 +675,45 @@ class Mythril(object):
             print("Slither error, cannot analyze dependency")
             return None
 
-        # find dependent functions for each function
-        # key: func (Slither_Func)
-        # value: set() all dependent functions of func (Slither_Func)
-        # TODO: Resolve dependency in variable read in functions
-        function_dependency_raw = {}
+        depdency_dict = {}
+
+        for func in slither_contract.functions:
+            if func.full_name != "fallback()" and func.full_name not in contract.disassembly.slither_mappings_dict.keys():
+                continue
+
+            # for outer dictionary
+            outer_var_temp = func.state_variables_written_including_internal_calls
+            outer_func_temp = set()
+
+            for write_var in outer_var_temp:
+                outer_func_temp = outer_func_temp.union(
+                    slither_contract.get_functions_reading_from_variable_including_internal_call(write_var))
+
+            if len(outer_func_temp) == 0:
+                continue
+
+            depdency_dict[func.full_name] = {}
+            for reading_func in outer_func_temp:
+                var_temp = set()
+                func_temp = set()
+
+                if reading_func.full_name != "fallback()" and reading_func.full_name not in contract.disassembly.slither_mappings_dict.keys():
+                    continue
+
+                for var_read in reading_func.state_variables_read_including_internal_calls:
+                    var_temp.add(var_read)
+
+                for var_read in var_temp:
+                    func_temp = func_temp.union(
+                        slither_contract.get_functions_writing_to_variable_including_internal_call(var_read))
+
+                # for inner dictionary
+                depdency_dict[func.full_name][reading_func.full_name] = func_temp
+
+
+
+        '''
+                function_dependency_raw = {}
         for fun in slither_contract.functions:
             temp = set()
             if fun.full_name not in contract.disassembly.slither_mappings_dict.keys():
@@ -728,6 +763,27 @@ class Mythril(object):
 
         priority = {'RAW': raw_root,
                     'WAW': waw_root}
+
+
+        '''
+
+        permutation_dict = {}
+        for func in slither_contract.functions:
+            if func.full_name not in contract.disassembly.slither_mappings_dict.keys():
+                continue
+
+            permutation_dict[func.full_name] = set()
+
+            for read in depdency_dict.values():
+                for write in read.values():
+                    if func.full_name in write:
+                        for item in write:
+                            permutation_dict[func.full_name].add(item)
+
+        priority = {
+            'dependency': depdency_dict,
+            'permutation': permutation_dict
+        }
 
 
         return priority
