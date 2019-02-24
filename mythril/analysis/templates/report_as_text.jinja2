@@ -2,6 +2,7 @@
 {% for issue in issues %}
 ==== {{ issue.title }} ====
 SWC ID: {{ issue['swc-id'] }}
+FOUND TIME: {{ issue['time'] }}
 Severity: {{ issue.severity }}
 Contract: {{ issue.contract | default("Unknown") }}
 Function name: {{ issue.function }}

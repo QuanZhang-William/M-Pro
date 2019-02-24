@@ -10,6 +10,8 @@ from mythril.solidity.soliditycontract import SolidityContract
 from mythril.analysis.swc_data import SWC_TO_TITLE
 from mythril.support.source_support import Source
 
+from datetime import datetime
+
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +31,7 @@ class Issue:
         severity=None,
         description_head="",
         description_tail="",
-        debug="",
+        debug=""
     ):
         """
 
@@ -59,6 +61,7 @@ class Issue:
         self.code = None
         self.lineno = None
         self.source_mapping = None
+        self.time = str(datetime.now())
 
         try:
             keccak = sha3.keccak_256()
@@ -88,6 +91,7 @@ class Issue:
             "min_gas_used": self.min_gas_used,
             "max_gas_used": self.max_gas_used,
             "sourceMap": self.source_mapping,
+            "time": self.time
         }
 
         if self.filename and self.lineno:
