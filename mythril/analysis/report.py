@@ -32,7 +32,8 @@ class Issue:
         description_head="",
         description_tail="",
         debug="",
-        time=None
+        time=None,
+        length=0
     ):
         """
 
@@ -63,6 +64,7 @@ class Issue:
         self.lineno = None
         self.source_mapping = None
         self.time = str(time)
+        self.length=length
 
         try:
             keccak = sha3.keccak_256()
@@ -92,7 +94,8 @@ class Issue:
             "min_gas_used": self.min_gas_used,
             "max_gas_used": self.max_gas_used,
             "sourceMap": self.source_mapping,
-            "time": self.time
+            "time": self.time,
+            "length": self.length
         }
 
         if self.filename and self.lineno:
@@ -153,7 +156,7 @@ class Report:
         :param issue:
         """
         m = hashlib.md5()
-        m.update((issue.contract + str(issue.address) + issue.title).encode("utf-8"))
+        m.update((issue.contract + str(issue.address) + issue.title + str(issue.length)).encode("utf-8"))
         self.issues[m.digest()] = issue
 
     def as_text(self):

@@ -29,18 +29,18 @@ class DelegateCallModule(DetectionModule):
             pre_hooks=["DELEGATECALL"],
         )
 
-    def execute(self, state: GlobalState, start_time) -> list:
+    def execute(self, state: GlobalState, start_time, length) -> list:
         """
 
         :param state:
         :return:
         """
         log.debug("Executing module: DELEGATE_CALL")
-        self._issues.extend(_analyze_states(state, start_time))
+        self._issues.extend(_analyze_states(state, start_time, length))
         return self.issues
 
 
-def _analyze_states(state: GlobalState, start_time: datetime) -> List[Issue]:
+def _analyze_states(state: GlobalState, start_time: datetime, length: int) -> List[Issue]:
     """
     :param state: the current state
     :return: returns the issues for that corresponding state
@@ -60,13 +60,13 @@ def _analyze_states(state: GlobalState, start_time: datetime) -> List[Issue]:
     meminstart = get_variable(state.mstate.stack[-3])
 
     if meminstart.type == VarType.CONCRETE:
-        issues += _concrete_call(call, state, address, meminstart, start_time)
+        issues += _concrete_call(call, state, address, meminstart, start_time, length)
 
     return issues
 
 
 def _concrete_call(
-    call: Call, state: GlobalState, address: int, meminstart: Variable, start_time:datetime
+    call: Call, state: GlobalState, address: int, meminstart: Variable, start_time:datetime, length
 ) -> List[Issue]:
     """
     :param call: The current call's information
@@ -92,7 +92,8 @@ def _concrete_call(
         "can access the storage of the calling contract. "
         "Make sure that the callee contract is audited properly.",
         gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
-        time=datetime.now() - start_time
+        time=datetime.now() - start_time,
+        length=length
     )
 
     target = hex(call.to.val) if call.to.type == VarType.CONCRETE else str(call.to)

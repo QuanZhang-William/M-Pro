@@ -14,7 +14,7 @@ from datetime import datetime
 log = logging.getLogger(__name__)
 
 
-def _analyze_state(state, start_time) -> list:
+def _analyze_state(state, start_time, length) -> list:
     """
 
     :param state:
@@ -51,7 +51,8 @@ def _analyze_state(state, start_time) -> list:
             bytecode=state.environment.code.bytecode,
             debug=debug,
             gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
-            time=datetime.now() - start_time
+            time=datetime.now() - start_time,
+            length=length
         )
         return [issue]
 
@@ -74,13 +75,13 @@ class ReachableExceptionsModule(DetectionModule):
             pre_hooks=["ASSERT_FAIL"],
         )
 
-    def execute(self, state: GlobalState, start_time) -> list:
+    def execute(self, state: GlobalState, start_time, length) -> list:
         """
 
         :param state:
         :return:
         """
-        self._issues.extend(_analyze_state(state, start_time))
+        self._issues.extend(_analyze_state(state, start_time, length))
         return self.issues
 
 

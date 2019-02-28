@@ -24,7 +24,7 @@ an informational issue.
 """
 
 
-def _analyze_state(state, start_time):
+def _analyze_state(state, start_time, length):
     """
 
     :param state:
@@ -69,7 +69,8 @@ def _analyze_state(state, start_time):
                 description_tail=description_tail,
                 debug=debug,
                 gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
-                time=datetime.now() - start_time
+                time=datetime.now() - start_time,
+                length=length
             )
 
         except UnsatError:
@@ -97,7 +98,8 @@ def _analyze_state(state, start_time):
                 description_tail=description_tail,
                 debug=debug,
                 gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
-                time=datetime.now() - start_time
+                time=datetime.now() - start_time,
+                length=length
             )
 
     except UnsatError:
@@ -121,13 +123,13 @@ class ExternalCalls(DetectionModule):
             pre_hooks=["CALL"],
         )
 
-    def execute(self, state: GlobalState, start_time):
+    def execute(self, state: GlobalState, start_time, length):
         """
 
         :param state:
         :return:
         """
-        self._issues.extend(_analyze_state(state, start_time))
+        self._issues.extend(_analyze_state(state, start_time, length))
         return self.issues
 
 

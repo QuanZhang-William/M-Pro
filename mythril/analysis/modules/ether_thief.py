@@ -53,16 +53,16 @@ class EtherThief(DetectionModule):
         super().reset_module()
         self._cache_addresses = {}
 
-    def execute(self, state: GlobalState, start_time: datetime):
+    def execute(self, state: GlobalState, start_time: datetime, length):
         """
 
         :param state:
         :return:
         """
-        self._issues.extend(self._analyze_state(state, start_time))
+        self._issues.extend(self._analyze_state(state, start_time, length))
         return self.issues
 
-    def _analyze_state(self, state, start_time):
+    def _analyze_state(self, state, start_time, length):
         """
 
         :param state:
@@ -116,7 +116,8 @@ class EtherThief(DetectionModule):
                 + " a vulnerability.",
                 debug=debug,
                 gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
-                time=datetime.now() - start_time
+                time=datetime.now() - start_time,
+                length=length
             )
         except UnsatError:
             log.debug("[ETHER_THIEF] no model found")

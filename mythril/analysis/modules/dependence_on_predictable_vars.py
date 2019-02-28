@@ -35,21 +35,21 @@ class PredictableDependenceModule(DetectionModule):
             pre_hooks=["CALL", "CALLCODE", "DELEGATECALL", "STATICCALL"],
         )
 
-    def execute(self, state: GlobalState, start_time: datetime) -> list:
+    def execute(self, state: GlobalState, start_time: datetime, length: int) -> list:
         """
 
         :param state:
         :return:
         """
         log.debug("Executing module: DEPENDENCE_ON_PREDICTABLE_VARS")
-        self._issues.extend(_analyze_states(state, start_time))
+        self._issues.extend(_analyze_states(state, start_time, length))
         return self.issues
 
 
 detector = PredictableDependenceModule()
 
 
-def _analyze_states(state: GlobalState, start_time: datetime) -> list:
+def _analyze_states(state: GlobalState, start_time: datetime, length: int) -> list:
     """
 
     :param state:
@@ -109,7 +109,8 @@ def _analyze_states(state: GlobalState, start_time: datetime) -> list:
                     call.state.mstate.min_gas_used,
                     call.state.mstate.max_gas_used,
                 ),
-                time=datetime.now() - start_time
+                time=datetime.now() - start_time,
+                length=length
             )
             issues.append(issue)
 
@@ -161,7 +162,8 @@ def _analyze_states(state: GlobalState, start_time: datetime) -> list:
                             call.state.mstate.min_gas_used,
                             call.state.mstate.max_gas_used,
                         ),
-                        time=datetime.now() - start_time
+                        time=datetime.now() - start_time,
+                        length=length
                     )
                     issues.append(issue)
                     break
@@ -203,7 +205,8 @@ def _analyze_states(state: GlobalState, start_time: datetime) -> list:
                                 call.state.mstate.min_gas_used,
                                 call.state.mstate.max_gas_used,
                             ),
-                            time=datetime.now() - start_time
+                            time=datetime.now() - start_time,
+                            length=length
                         )
                         issues.append(issue)
                         break

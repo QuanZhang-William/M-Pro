@@ -107,17 +107,8 @@ class LaserEVM:
         self.iprof = InstructionProfiler() if enable_iprof else None
 
         log.info("LASER EVM initialized with dynamic loader: " + str(dynamic_loader))
-        self.first_order_work_list = ['RAW']
-        self.second_order_work_list = ['WAW']
-
-        self.ranking = []
 
         self.bad_bit = False
-
-        self.first_work_list = []
-        self.second_work_list = []
-        self.third_work_list = []
-        self.forth_work_list = []
 
 
     @property
@@ -305,7 +296,7 @@ class LaserEVM:
             self._add_world_state(global_state)
             return [], None
 
-        self._execute_pre_hook(op_code, global_state, self.time)
+        self._execute_pre_hook(op_code, global_state, self.time, len(global_state.world_state.transaction_sequence) - 1)
         try:
             self._measure_coverage(global_state)
             new_global_states = Instruction(op_code, self.dynamic_loader, self.iprof, disassembly, priority, title, laser_obj).evaluate(
@@ -324,7 +315,7 @@ class LaserEVM:
                 new_global_states = []
             else:
                 # First execute the post hook for the transaction ending instruction
-                self._execute_post_hook(op_code, [global_state])
+                self._execute_post_hook(op_code, [global_state], self.time, len(global_state.world_state.transaction_sequence) - 1)
                 new_global_states = self._end_message_call(
                     return_global_state,
                     global_state,
@@ -360,7 +351,7 @@ class LaserEVM:
                 new_global_states = []
             else:
                 # First execute the post hook for the transaction ending instruction
-                self._execute_post_hook(op_code, [end_signal.global_state])
+                self._execute_post_hook(op_code, [end_signal.global_state], self.time, len(global_state.world_state.transaction_sequence) - 1)
 
                 new_global_states = self._end_message_call(
                     copy(return_global_state),
@@ -369,7 +360,7 @@ class LaserEVM:
                     return_data=transaction.return_data,
                 )
 
-        self._execute_post_hook(op_code, new_global_states)
+        self._execute_post_hook(op_code, new_global_states, self.time, len(global_state.world_state.transaction_sequence) - 1)
 
         return new_global_states, op_code
 
@@ -569,7 +560,7 @@ class LaserEVM:
 
         return hook_decorator
 
-    def _execute_pre_hook(self, op_code: str, global_state: GlobalState, start_time) -> None:
+    def _execute_pre_hook(self, op_code: str, global_state: GlobalState, start_time, transaction_lenth) -> None:
         """
 
         :param op_code:
@@ -579,10 +570,10 @@ class LaserEVM:
         if op_code not in self.pre_hooks.keys():
             return
         for hook in self.pre_hooks[op_code]:
-            hook(global_state, start_time)
+            hook(global_state, start_time, transaction_lenth)
 
     def _execute_post_hook(
-        self, op_code: str, global_states: List[GlobalState]
+        self, op_code: str, global_states: List[GlobalState], start_time, transaction_lenth
     ) -> None:
         """
 
@@ -595,7 +586,7 @@ class LaserEVM:
 
         for hook in self.post_hooks[op_code]:
             for global_state in global_states:
-                hook(global_state)
+                hook(global_state, start_time, transaction_lenth)
 
     def pre_hook(self, op_code: str) -> Callable:
         """

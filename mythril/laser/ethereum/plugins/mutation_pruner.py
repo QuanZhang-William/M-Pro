@@ -41,7 +41,7 @@ class MutationPruner:
         """
 
         @symbolic_vm.pre_hook("SSTORE")
-        def mutator_hook(global_state: GlobalState, start_time):
+        def mutator_hook(global_state: GlobalState, start_time, length):
             global_state.annotate(MutationAnnotation())
 
         @symbolic_vm.laser_hook("add_world_state")

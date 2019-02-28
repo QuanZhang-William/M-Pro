@@ -14,7 +14,7 @@ Check for usage of deprecated opcodes
 """
 
 
-def _analyze_state(state, start_time):
+def _analyze_state(state, start_time, length):
     """
 
     :param state:
@@ -59,7 +59,8 @@ def _analyze_state(state, start_time):
         description_head=description_head,
         description_tail=description_tail,
         gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
-        time=datetime.now() - start_time
+        time=datetime.now() - start_time,
+        length=length
     )
     return [issue]
 
@@ -77,13 +78,13 @@ class DeprecatedOperationsModule(DetectionModule):
             pre_hooks=["ORIGIN", "CALLCODE"],
         )
 
-    def execute(self, state: GlobalState, start_time: datetime):
+    def execute(self, state: GlobalState, start_time: datetime, length: int):
         """
 
         :param state:
         :return:
         """
-        self._issues.extend(_analyze_state(state, start_time))
+        self._issues.extend(_analyze_state(state, start_time, length))
         return self.issues
 
 

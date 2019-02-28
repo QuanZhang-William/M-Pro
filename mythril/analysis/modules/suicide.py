@@ -39,16 +39,16 @@ class SuicideModule(DetectionModule):
         super().reset_module()
         self._cache_address = {}
 
-    def execute(self, state: GlobalState, start_time):
+    def execute(self, state: GlobalState, start_time, length):
         """
 
         :param state:
         :return:
         """
-        self._issues.extend(self._analyze_state(state, start_time))
+        self._issues.extend(self._analyze_state(state, start_time, length))
         return self.issues
 
-    def _analyze_state(self, state, start_time):
+    def _analyze_state(self, state, start_time, length):
         log.info("Suicide module: Analyzing suicide instruction")
         node = state.node
         instruction = state.get_current_instruction()
@@ -92,7 +92,8 @@ class SuicideModule(DetectionModule):
                 description_tail=description_tail,
                 debug=debug,
                 gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
-                time=datetime.now() - start_time
+                time=datetime.now() - start_time,
+                length=length
             )
             return [issue]
         except UnsatError:

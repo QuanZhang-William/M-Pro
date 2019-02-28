@@ -3,6 +3,7 @@
 ==== {{ issue.title }} ====
 SWC ID: {{ issue['swc-id'] }}
 FOUND TIME: {{ issue['time'] }}
+Transaction Length: {{ issue['length'] }}
 Severity: {{ issue.severity }}
 Contract: {{ issue.contract | default("Unknown") }}
 Function name: {{ issue.function }}

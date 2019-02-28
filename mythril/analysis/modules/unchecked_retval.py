@@ -48,17 +48,17 @@ class UncheckedRetvalModule(DetectionModule):
             post_hooks=["CALL", "DELEGATECALL", "STATICCALL", "CALLCODE"],
         )
 
-    def execute(self, state: GlobalState, start_time) -> list:
+    def execute(self, state: GlobalState, start_time, length) -> list:
         """
 
         :param state:
         :return:
         """
-        self._issues.extend(_analyze_state(state, start_time))
+        self._issues.extend(_analyze_state(state, start_time, length))
         return self.issues
 
 
-def _analyze_state(state: GlobalState, start_time) -> list:
+def _analyze_state(state: GlobalState, start_time, length) -> list:
     instruction = state.get_current_instruction()
     node = state.node
 
@@ -94,7 +94,8 @@ def _analyze_state(state: GlobalState, start_time) -> list:
                 description_head="The return value of a message call is not checked.",
                 description_tail=description_tail,
                 gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
-                time=datetime.now() - start_time
+                time=datetime.now() - start_time,
+                length=length
             )
 
             issues.append(issue)

@@ -63,7 +63,7 @@ class IntegerOverflowUnderflowModule(DetectionModule):
         self._overflow_cache = {}
         self._underflow_cache = {}
 
-    def execute(self, state: GlobalState, start_time):
+    def execute(self, state: GlobalState, start_time, length):
         """Executes analysis module for integer underflow and integer overflow.
 
         :param state: Statespace to analyse
@@ -81,9 +81,9 @@ class IntegerOverflowUnderflowModule(DetectionModule):
         elif state.get_current_instruction()["opcode"] == "SUB":
             self._handle_sub(state)
         elif state.get_current_instruction()["opcode"] == "SSTORE":
-            self._handle_sstore(state, start_time)
+            self._handle_sstore(state, start_time, length)
         elif state.get_current_instruction()["opcode"] == "JUMPI":
-            self._handle_jumpi(state, start_time)
+            self._handle_jumpi(state, start_time, length)
 
     def _handle_add(self, state):
         stack = state.mstate.stack
@@ -165,7 +165,7 @@ class IntegerOverflowUnderflowModule(DetectionModule):
     def _get_title(_type):
         return "Integer {}".format(_type)
 
-    def _handle_sstore(self, state, start_time):
+    def _handle_sstore(self, state, start_time, length):
         stack = state.mstate.stack
         value = stack[-2]
 
@@ -190,7 +190,8 @@ class IntegerOverflowUnderflowModule(DetectionModule):
                 description_head=self._get_description_head(annotation, _type),
                 description_tail=self._get_description_tail(annotation, _type),
                 gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
-                time=datetime.now() - start_time
+                time=datetime.now() - start_time,
+                length=length
             )
 
             address = _get_address_from_state(ostate)
@@ -221,7 +222,7 @@ class IntegerOverflowUnderflowModule(DetectionModule):
 
             self._issues.append(issue)
 
-    def _handle_jumpi(self, state, start_time):
+    def _handle_jumpi(self, state, start_time, length):
         stack = state.mstate.stack
         value = stack[-2]
 
@@ -243,7 +244,8 @@ class IntegerOverflowUnderflowModule(DetectionModule):
                 description_head=self._get_description_head(annotation, _type),
                 description_tail=self._get_description_tail(annotation, _type),
                 gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
-                time=datetime.now() - start_time
+                time=datetime.now() - start_time,
+                length=length
             )
 
             address = _get_address_from_state(ostate)
