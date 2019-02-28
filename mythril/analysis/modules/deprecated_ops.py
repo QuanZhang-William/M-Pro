@@ -5,6 +5,8 @@ from mythril.analysis.modules.base import DetectionModule
 from mythril.laser.ethereum.state.global_state import GlobalState
 import logging
 
+from datetime import datetime
+
 log = logging.getLogger(__name__)
 
 DESCRIPTION = """
@@ -12,7 +14,7 @@ Check for usage of deprecated opcodes
 """
 
 
-def _analyze_state(state):
+def _analyze_state(state, start_time):
     """
 
     :param state:
@@ -57,6 +59,7 @@ def _analyze_state(state):
         description_head=description_head,
         description_tail=description_tail,
         gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
+        time=datetime.now() - start_time
     )
     return [issue]
 
@@ -74,13 +77,13 @@ class DeprecatedOperationsModule(DetectionModule):
             pre_hooks=["ORIGIN", "CALLCODE"],
         )
 
-    def execute(self, state: GlobalState):
+    def execute(self, state: GlobalState, start_time: datetime):
         """
 
         :param state:
         :return:
         """
-        self._issues.extend(_analyze_state(state))
+        self._issues.extend(_analyze_state(state, start_time))
         return self.issues
 
 

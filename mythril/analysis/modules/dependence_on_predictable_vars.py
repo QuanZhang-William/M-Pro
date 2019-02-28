@@ -12,6 +12,8 @@ from mythril.analysis.swc_data import TIMESTAMP_DEPENDENCE, WEAK_RANDOMNESS
 from mythril.exceptions import UnsatError
 from mythril.laser.ethereum.state.global_state import GlobalState
 
+from datetime import datetime
+
 log = logging.getLogger(__name__)
 
 
@@ -33,21 +35,21 @@ class PredictableDependenceModule(DetectionModule):
             pre_hooks=["CALL", "CALLCODE", "DELEGATECALL", "STATICCALL"],
         )
 
-    def execute(self, state: GlobalState) -> list:
+    def execute(self, state: GlobalState, start_time: datetime) -> list:
         """
 
         :param state:
         :return:
         """
         log.debug("Executing module: DEPENDENCE_ON_PREDICTABLE_VARS")
-        self._issues.extend(_analyze_states(state))
+        self._issues.extend(_analyze_states(state, start_time))
         return self.issues
 
 
 detector = PredictableDependenceModule()
 
 
-def _analyze_states(state: GlobalState) -> list:
+def _analyze_states(state: GlobalState, start_time: datetime) -> list:
     """
 
     :param state:
@@ -107,6 +109,7 @@ def _analyze_states(state: GlobalState) -> list:
                     call.state.mstate.min_gas_used,
                     call.state.mstate.max_gas_used,
                 ),
+                time=datetime.now() - start_time
             )
             issues.append(issue)
 
@@ -158,6 +161,7 @@ def _analyze_states(state: GlobalState) -> list:
                             call.state.mstate.min_gas_used,
                             call.state.mstate.max_gas_used,
                         ),
+                        time=datetime.now() - start_time
                     )
                     issues.append(issue)
                     break
@@ -199,6 +203,7 @@ def _analyze_states(state: GlobalState) -> list:
                                 call.state.mstate.min_gas_used,
                                 call.state.mstate.max_gas_used,
                             ),
+                            time=datetime.now() - start_time
                         )
                         issues.append(issue)
                         break

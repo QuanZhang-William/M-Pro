@@ -10,6 +10,8 @@ from mythril.laser.ethereum.state.global_state import GlobalState
 import logging
 from mythril.analysis.call_helpers import get_call_from_state
 
+from datetime import datetime
+
 log = logging.getLogger(__name__)
 
 
@@ -43,12 +45,12 @@ class MultipleSendsModule(DetectionModule):
             ],
         )
 
-    def execute(self, state: GlobalState):
-        self._issues.extend(_analyze_state(state))
+    def execute(self, state: GlobalState, start_time):
+        self._issues.extend(_analyze_state(state, start_time))
         return self.issues
 
 
-def _analyze_state(state: GlobalState):
+def _analyze_state(state: GlobalState, start_time):
     """
     :param state: the current state
     :return: returns the issues for that corresponding state
@@ -97,6 +99,7 @@ def _analyze_state(state: GlobalState):
                 description_head="Multiple sends are executed in one transaction.",
                 description_tail=description_tail,
                 gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
+                time=datetime.now() - start_time
             )
 
             return [issue]

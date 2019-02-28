@@ -10,6 +10,8 @@ from mythril.exceptions import UnsatError
 from mythril.laser.ethereum.state.annotation import StateAnnotation
 from mythril.laser.ethereum.state.global_state import GlobalState
 
+from datetime import datetime
+
 import logging
 
 log = logging.getLogger(__name__)
@@ -46,17 +48,17 @@ class UncheckedRetvalModule(DetectionModule):
             post_hooks=["CALL", "DELEGATECALL", "STATICCALL", "CALLCODE"],
         )
 
-    def execute(self, state: GlobalState) -> list:
+    def execute(self, state: GlobalState, start_time) -> list:
         """
 
         :param state:
         :return:
         """
-        self._issues.extend(_analyze_state(state))
+        self._issues.extend(_analyze_state(state, start_time))
         return self.issues
 
 
-def _analyze_state(state: GlobalState) -> list:
+def _analyze_state(state: GlobalState, start_time) -> list:
     instruction = state.get_current_instruction()
     node = state.node
 
@@ -92,6 +94,7 @@ def _analyze_state(state: GlobalState) -> list:
                 description_head="The return value of a message call is not checked.",
                 description_tail=description_tail,
                 gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
+                time=datetime.now() - start_time
             )
 
             issues.append(issue)

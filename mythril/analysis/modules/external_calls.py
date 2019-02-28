@@ -11,6 +11,8 @@ from mythril.exceptions import UnsatError
 import logging
 import json
 
+from datetime import datetime
+
 log = logging.getLogger(__name__)
 
 DESCRIPTION = """
@@ -22,7 +24,7 @@ an informational issue.
 """
 
 
-def _analyze_state(state):
+def _analyze_state(state, start_time):
     """
 
     :param state:
@@ -67,6 +69,7 @@ def _analyze_state(state):
                 description_tail=description_tail,
                 debug=debug,
                 gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
+                time=datetime.now() - start_time
             )
 
         except UnsatError:
@@ -94,6 +97,7 @@ def _analyze_state(state):
                 description_tail=description_tail,
                 debug=debug,
                 gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
+                time=datetime.now() - start_time
             )
 
     except UnsatError:
@@ -117,13 +121,13 @@ class ExternalCalls(DetectionModule):
             pre_hooks=["CALL"],
         )
 
-    def execute(self, state: GlobalState):
+    def execute(self, state: GlobalState, start_time):
         """
 
         :param state:
         :return:
         """
-        self._issues.extend(_analyze_state(state))
+        self._issues.extend(_analyze_state(state, start_time))
         return self.issues
 
 

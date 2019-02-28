@@ -12,6 +12,8 @@ from mythril.exceptions import UnsatError
 from mythril.laser.ethereum.state.global_state import GlobalState
 from mythril.laser.smt import UGT, BVAddNoOverflow, Sum, symbol_factory
 
+from datetime import datetime
+
 log = logging.getLogger(__name__)
 
 DESCRIPTION = """
@@ -51,16 +53,16 @@ class EtherThief(DetectionModule):
         super().reset_module()
         self._cache_addresses = {}
 
-    def execute(self, state: GlobalState):
+    def execute(self, state: GlobalState, start_time: datetime):
         """
 
         :param state:
         :return:
         """
-        self._issues.extend(self._analyze_state(state))
+        self._issues.extend(self._analyze_state(state, start_time))
         return self.issues
 
-    def _analyze_state(self, state):
+    def _analyze_state(self, state, start_time):
         """
 
         :param state:
@@ -114,6 +116,7 @@ class EtherThief(DetectionModule):
                 + " a vulnerability.",
                 debug=debug,
                 gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
+                time=datetime.now() - start_time
             )
         except UnsatError:
             log.debug("[ETHER_THIEF] no model found")

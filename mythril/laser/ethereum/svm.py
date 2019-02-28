@@ -305,7 +305,7 @@ class LaserEVM:
             self._add_world_state(global_state)
             return [], None
 
-        self._execute_pre_hook(op_code, global_state)
+        self._execute_pre_hook(op_code, global_state, self.time)
         try:
             self._measure_coverage(global_state)
             new_global_states = Instruction(op_code, self.dynamic_loader, self.iprof, disassembly, priority, title, laser_obj).evaluate(
@@ -569,7 +569,7 @@ class LaserEVM:
 
         return hook_decorator
 
-    def _execute_pre_hook(self, op_code: str, global_state: GlobalState) -> None:
+    def _execute_pre_hook(self, op_code: str, global_state: GlobalState, start_time) -> None:
         """
 
         :param op_code:
@@ -579,7 +579,7 @@ class LaserEVM:
         if op_code not in self.pre_hooks.keys():
             return
         for hook in self.pre_hooks[op_code]:
-            hook(global_state)
+            hook(global_state, start_time)
 
     def _execute_post_hook(
         self, op_code: str, global_states: List[GlobalState]

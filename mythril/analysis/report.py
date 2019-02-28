@@ -31,7 +31,8 @@ class Issue:
         severity=None,
         description_head="",
         description_tail="",
-        debug=""
+        debug="",
+        time=None
     ):
         """
 
@@ -61,7 +62,7 @@ class Issue:
         self.code = None
         self.lineno = None
         self.source_mapping = None
-        self.time = str(datetime.now())
+        self.time = str(time)
 
         try:
             keccak = sha3.keccak_256()

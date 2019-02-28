@@ -7,6 +7,8 @@ from mythril.laser.ethereum.state.global_state import GlobalState
 import logging
 import json
 
+from datetime import datetime
+
 log = logging.getLogger(__name__)
 
 DESCRIPTION = """
@@ -37,16 +39,16 @@ class SuicideModule(DetectionModule):
         super().reset_module()
         self._cache_address = {}
 
-    def execute(self, state: GlobalState):
+    def execute(self, state: GlobalState, start_time):
         """
 
         :param state:
         :return:
         """
-        self._issues.extend(self._analyze_state(state))
+        self._issues.extend(self._analyze_state(state, start_time))
         return self.issues
 
-    def _analyze_state(self, state):
+    def _analyze_state(self, state, start_time):
         log.info("Suicide module: Analyzing suicide instruction")
         node = state.node
         instruction = state.get_current_instruction()
@@ -90,6 +92,7 @@ class SuicideModule(DetectionModule):
                 description_tail=description_tail,
                 debug=debug,
                 gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
+                time=datetime.now() - start_time
             )
             return [issue]
         except UnsatError:

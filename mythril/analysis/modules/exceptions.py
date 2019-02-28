@@ -9,10 +9,12 @@ from mythril.analysis.swc_data import ASSERT_VIOLATION
 from mythril.exceptions import UnsatError
 from mythril.laser.ethereum.state.global_state import GlobalState
 
+from datetime import datetime
+
 log = logging.getLogger(__name__)
 
 
-def _analyze_state(state) -> list:
+def _analyze_state(state, start_time) -> list:
     """
 
     :param state:
@@ -49,6 +51,7 @@ def _analyze_state(state) -> list:
             bytecode=state.environment.code.bytecode,
             debug=debug,
             gas_used=(state.mstate.min_gas_used, state.mstate.max_gas_used),
+            time=datetime.now() - start_time
         )
         return [issue]
 
@@ -71,13 +74,13 @@ class ReachableExceptionsModule(DetectionModule):
             pre_hooks=["ASSERT_FAIL"],
         )
 
-    def execute(self, state: GlobalState) -> list:
+    def execute(self, state: GlobalState, start_time) -> list:
         """
 
         :param state:
         :return:
         """
-        self._issues.extend(_analyze_state(state))
+        self._issues.extend(_analyze_state(state, start_time))
         return self.issues
 
 
