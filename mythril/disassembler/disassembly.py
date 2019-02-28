@@ -97,7 +97,8 @@ def get_function_info(
     function_names = signature_database.get(function_hash)
     if len(function_names) > 1:
         # In this case there was an ambiguous result
-        function_name = "[{}] (ambiguous)".format(", ".join(function_names))
+        #function_name = "[{}] (ambiguous)".format(", ".join(function_names))
+        function_name = function_names[0]
     elif len(function_names) == 1:
         function_name = function_names[0]
     else:
