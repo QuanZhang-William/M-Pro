@@ -696,6 +696,7 @@ class Mythril(object):
             for reading_func in outer_func_temp:
                 var_temp = set()
                 func_temp = set()
+                addr_temp = set()
 
                 if reading_func.full_name != "fallback()" and reading_func.full_name not in contract.disassembly.slither_mappings_dict.keys():
                     continue
@@ -707,8 +708,13 @@ class Mythril(object):
                     func_temp = func_temp.union(
                         slither_contract.get_functions_writing_to_variable_including_internal_call(var_read))
 
+
+                for temp in func_temp:
+                    addr_temp.add(contract.disassembly.function_name_to_address[temp])
+
                 # for inner dictionary
-                depdency_dict[func.full_name][reading_func.full_name] = func_temp
+                reading_func_addr = contract.disassembly.function_name_to_address[reading_func.full_name]
+                depdency_dict[func.full_name][reading_func_addr] = addr_temp
 
 
 
@@ -772,19 +778,30 @@ class Mythril(object):
             if func.full_name not in contract.disassembly.slither_mappings_dict.keys():
                 continue
 
-            permutation_dict[func.full_name] = set()
+            permutation_dict[contract.disassembly.function_name_to_address[func.full_name]] = set()
 
             for read in depdency_dict.values():
                 for write in read.values():
-                    if func.full_name in write:
+                    if contract.disassembly.function_name_to_address[func.full_name] in write:
                         for item in write:
-                            permutation_dict[func.full_name].add(item)
+                            permutation_dict[contract.disassembly.function_name_to_address[func.full_name]]\
+                                .add(item)
+
+
+        write_only_functions = set()
+        for func in slither_contract.functions:
+            if func.full_name not in contract.disassembly.slither_mappings_dict.keys():
+                continue
+            var_read = func.state_variables_read_including_internal_calls
+            if var_read is not None and len(var_read) == 0:
+                write_only_functions.add(contract.disassembly.function_name_to_address[func.full_name])
+
 
         priority = {
             'dependency': depdency_dict,
-            'permutation': permutation_dict
+            'permutation': permutation_dict,
+            'write_only_func': write_only_functions
         }
-
 
         return priority
 

@@ -44,48 +44,36 @@ def heuristic_message_call_helper(laser_evm, callee_address: str, transaction_co
 
         if len(open_state.transaction_sequence) == transaction_count:
             if transaction_count == 2:
-                last_explore = priority['dependency'][last_func_called].keys()
+                last_explore = priority['dependency'][last_func_called].keys()\
+                    if last_func_called in priority['dependency'].keys() else None
 
-                last_explore_addr = set()
-
-                for func in last_explore:
-                    last_explore_addr.add(disassembly.function_name_to_address[func])
-
-                # there is no read based on this function, prune the path
-                if len(last_explore) == 0:
+                if last_explore is None:
                     continue
-                open_state.next_explores = last_explore_addr
+                open_state.next_explores = set(last_explore)
             else:
                 open_state.next_explores = open_state.last_func
 
         elif len(open_state.transaction_sequence) == 2:
-            next_explores = priority['dependency'].keys()
-            last_explore = priority['dependency'][last_func_called].keys()
+            next_explores = priority['permutation'][disassembly.function_name_to_address[last_func_called]] \
+                if disassembly.function_name_to_address[last_func_called] in priority['permutation'].keys() else None
 
-            next_explores_addr = set()
-            last_explore_addr = set()
+            last_explore = priority['dependency'][last_func_called].keys() \
+                if last_func_called in priority['dependency'].keys() else None
 
-            for func in next_explores:
-                next_explores_addr.add(disassembly.function_name_to_address[func])
-
-            for func in last_explore:
-                last_explore_addr.add(disassembly.function_name_to_address[func])
-
-            # there is no read based on this function, prune the path
-            if len(next_explores) == 0:
+            if next_explores is None or len(next_explores) == 0 or last_explore is None or len(last_explore) == 0:
                 continue
 
             open_state.root_func = last_func_called
-            open_state.last_func = last_explore_addr
-            open_state.next_explores = next_explores_addr
+            open_state.last_func = set(last_explore)
+            open_state.next_explores = set(next_explores)
         else:
-            temp = priority['permutation'][last_func_called]
-            next_explores_addr = set()
+            next_explores = priority['permutation'][open_state.root_func] \
+                if open_state.root_func in priority['permutation'].keys() else None
 
-            for func in temp:
-                next_explores_addr.add(disassembly.function_name_to_address[func])
+            if next_explores is None or len(next_explores) == 0:
+                continue
 
-            open_state.next_explores = next_explores_addr
+            open_state.next_explores = next_explores
 
         next_transaction_id = get_next_transaction_id()
         transaction = MessageCallTransaction(
