@@ -710,11 +710,13 @@ class Mythril(object):
 
 
                 for temp in func_temp:
-                    addr_temp.add(contract.disassembly.function_name_to_address[temp])
+                    if temp in contract.disassembly.function_name_to_address.keys():
+                        addr_temp.add(contract.disassembly.function_name_to_address[temp])
 
                 # for inner dictionary
-                reading_func_addr = contract.disassembly.function_name_to_address[reading_func.full_name]
-                depdency_dict[func.full_name][reading_func_addr] = addr_temp
+                if reading_func.full_name in contract.disassembly.function_name_to_address.keys():
+                    reading_func_addr = contract.disassembly.function_name_to_address[reading_func.full_name]
+                    depdency_dict[func.full_name][reading_func_addr] = addr_temp
 
 
 
