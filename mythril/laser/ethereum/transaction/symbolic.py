@@ -41,15 +41,14 @@ def heuristic_message_call_helper(laser_evm, callee_address: str, transaction_co
             continue
 
         last_func_called = open_state.node.function_name
+        base_explore = set(priority['dependency'][last_func_called].keys())\
+                    if last_func_called in priority['dependency'].keys() else set()
 
         if len(open_state.transaction_sequence) == transaction_count:
             if transaction_count == 2:
-                last_explore = priority['dependency'][last_func_called].keys()\
-                    if last_func_called in priority['dependency'].keys() else None
-
-                if last_explore is None:
+                if base_explore is None or len(base_explore) == 0:
                     continue
-                open_state.next_explores = set(last_explore)
+                open_state.next_explores = base_explore
             else:
                 open_state.next_explores = open_state.last_func
 
@@ -60,16 +59,19 @@ def heuristic_message_call_helper(laser_evm, callee_address: str, transaction_co
             last_explore = priority['dependency'][last_func_called].keys() \
                 if last_func_called in priority['dependency'].keys() else None
 
+            next_explores = set(next_explores).union(base_explore)
             if next_explores is None or len(next_explores) == 0 or last_explore is None or len(last_explore) == 0:
                 continue
 
             open_state.root_func = last_func_called
             open_state.last_func = set(last_explore)
-            open_state.next_explores = set(next_explores)
+
+            open_state.next_explores = next_explores
         else:
             next_explores = priority['permutation'][open_state.root_func] \
                 if open_state.root_func in priority['permutation'].keys() else None
 
+            next_explores = set(next_explores).union(base_explore)
             if next_explores is None or len(next_explores) == 0:
                 continue
 
