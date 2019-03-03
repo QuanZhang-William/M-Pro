@@ -54,10 +54,10 @@ def heuristic_message_call_helper(laser_evm, callee_address: str, transaction_co
 
         elif len(open_state.transaction_sequence) == 2:
             next_explores = priority['permutation'][disassembly.function_name_to_address[last_func_called]] \
-                if disassembly.function_name_to_address[last_func_called] in priority['permutation'].keys() else None
+                if disassembly.function_name_to_address[last_func_called] in priority['permutation'].keys() else set()
 
             last_explore = priority['dependency'][last_func_called].keys() \
-                if last_func_called in priority['dependency'].keys() else None
+                if last_func_called in priority['dependency'].keys() else set()
 
             next_explores = set(next_explores).union(base_explore)
             if next_explores is None or len(next_explores) == 0 or last_explore is None or len(last_explore) == 0:
@@ -69,7 +69,7 @@ def heuristic_message_call_helper(laser_evm, callee_address: str, transaction_co
             open_state.next_explores = next_explores
         else:
             next_explores = priority['permutation'][open_state.root_func] \
-                if open_state.root_func in priority['permutation'].keys() else None
+                if open_state.root_func in priority['permutation'].keys() else set()
 
             next_explores = set(next_explores).union(base_explore)
             if next_explores is None or len(next_explores) == 0:
