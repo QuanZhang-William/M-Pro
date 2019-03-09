@@ -454,7 +454,7 @@ def main():
                     f.write('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n')
                     f.write('Williams test file: ' + args.solidity_file[0] + '\n')
                     f.write('Total states:' + str(global_total_states) + '\n')
-                    f.write('' + str(end - start) + '\n')
+                    f.write('' + str((end - start).total_seconds()) + '\n')
                     f.write(outputs[args.outform])
             except Exception as e:
                 exit_with_error(args.outform, "Error saving report: " + str(e))
@@ -545,7 +545,7 @@ def main():
                             f.write('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n')
                             f.write('Williams test file: ' + args.solidity_file[0] + '\n')
                             f.write('Total states:' + str(global_total_states) + '\n')
-                            f.write('' + str(end - start) + '\n')
+                            f.write('' + str((end - start).total_seconds()) + '\n')
                             f.write(outputs[args.outform])
                     except Exception as e:
                         exit_with_error(args.outform, "Error saving report: " + str(e))
