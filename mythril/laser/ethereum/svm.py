@@ -296,7 +296,7 @@ class LaserEVM:
             self._add_world_state(global_state)
             return [], None
 
-        self._execute_pre_hook(op_code, global_state, self.time, len(global_state.world_state.transaction_sequence) - 1)
+        #self._execute_pre_hook(op_code, global_state, self.time, len(global_state.world_state.transaction_sequence) - 1)
         try:
             self._measure_coverage(global_state)
             new_global_states = Instruction(op_code, self.dynamic_loader, self.iprof, disassembly, priority, title, laser_obj).evaluate(
@@ -315,7 +315,7 @@ class LaserEVM:
                 new_global_states = []
             else:
                 # First execute the post hook for the transaction ending instruction
-                self._execute_post_hook(op_code, [global_state], self.time, len(global_state.world_state.transaction_sequence) - 1)
+                #self._execute_post_hook(op_code, [global_state], self.time, len(global_state.world_state.transaction_sequence) - 1)
                 new_global_states = self._end_message_call(
                     return_global_state,
                     global_state,
@@ -351,7 +351,7 @@ class LaserEVM:
                 new_global_states = []
             else:
                 # First execute the post hook for the transaction ending instruction
-                self._execute_post_hook(op_code, [end_signal.global_state], self.time, len(global_state.world_state.transaction_sequence) - 1)
+                #self._execute_post_hook(op_code, [end_signal.global_state], self.time, len(global_state.world_state.transaction_sequence) - 1)
 
                 new_global_states = self._end_message_call(
                     copy(return_global_state),
@@ -360,7 +360,7 @@ class LaserEVM:
                     return_data=transaction.return_data,
                 )
 
-        self._execute_post_hook(op_code, new_global_states, self.time, len(global_state.world_state.transaction_sequence) - 1)
+        #self._execute_post_hook(op_code, new_global_states, self.time, len(global_state.world_state.transaction_sequence) - 1)
 
         return new_global_states, op_code
 

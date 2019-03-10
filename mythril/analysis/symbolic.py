@@ -89,14 +89,14 @@ class SymExecWrapper:
 
         mutation_plugin.initialize(self.laser)
 
-        self.laser.register_hooks(
-            hook_type="pre",
-            hook_dict=get_detection_module_hooks(modules, hook_type="pre"),
-        )
-        self.laser.register_hooks(
-            hook_type="post",
-            hook_dict=get_detection_module_hooks(modules, hook_type="post"),
-        )
+        #self.laser.register_hooks(
+        #    hook_type="pre",
+        #    hook_dict=get_detection_module_hooks(modules, hook_type="pre"),
+        #)
+        #self.laser.register_hooks(
+        #    hook_type="post",
+        #    hook_dict=get_detection_module_hooks(modules, hook_type="post"),
+        #)
 
         if isinstance(contract, SolidityContract):
             self.laser.sym_exec(
