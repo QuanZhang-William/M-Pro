@@ -1,3 +1,5 @@
+# This project is no longer maintained
+
 # Mythril Pro
 Mythril Pro is developed based on original Mythril-Classic symbolic engine, utilizing storage dependency analysis to prioritize path executions and prune unnecessary search spaces. Mythril Pro is significantly more efficient and scalable, while producing exactly the same result as Mythril-Classic.
 
