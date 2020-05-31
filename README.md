@@ -9,6 +9,8 @@ Mythril Pro is developed based on original Mythril-Classic symbolic engine, util
 
 See the [Wiki](https://github.com/ConsenSys/mythril/wiki/Installation-and-Setup) to install required dependencies. 
 
+You can use [solc-select](https://github.com/crytic/solc-select)  to quickly switch between Solidity compiler versions
+
 Note: do not run 'pip3 install mythril' in this step, as this command installs the original Mythril-Classic.
 
 ```bash
@@ -29,8 +31,20 @@ $ pip3 install .
 To install Mythril Pro:
 
 ```bash
-$ git clone https://github.com/QuanZhang-William/mythril-classic.git && cd mythril-classic
+$ git clone https://github.com/QuanZhang-William/M-Pro.git && cd M-Pro
 $ pip3 install . 
+```
+Get the RawOnly branch:
+```bash
+$ git checkout RawOnly
+$ pip3 install . 
+```
+
+To Run the Tool:
+
+navigate to directory M-Pro
+```bash
+python3 myth -w <contract address> 
 ```
 
 ## Mythril Pro additional usage
